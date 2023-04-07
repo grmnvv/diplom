@@ -6,7 +6,7 @@ const UserModel = model("User", new Schema({
     password: {type: String, required: true},
     login: {type: String},
     isActivated: {type: Boolean, default:false},
-    activationLink: { type: String},
+    salt: { type: String},
 }))
 
 export { UserModel };

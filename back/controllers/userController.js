@@ -18,8 +18,8 @@ class UserController {
 
     async login(req, res, next) {
         try {
-            const { email, password, login } = req.body;
-            const userData = await UserService.login(email, password, login);
+            const { email, password} = req.body;
+            const userData = await UserService.login(email, password);
             res.cookie("refreshToken", userData.refreshToken, {
                 maxAge: 30 * 24 * 60 * 60 * 1000,
                 httpOnly: true,
@@ -65,10 +65,11 @@ class UserController {
         }
     }
 
-    async forgotMail(req, res, next ) {
+    async sendcode(req, res, next ) {
         try {
-            const { email, login } = req.body;
-            const userData = await UserService.mailForgot(email, login)
+            console.log('fds')
+            const { email, code } = req.body;
+            const userData = await UserService.sendcode(email, code)
             return res.json(userData);
         } catch (e) {
             next(e);
@@ -77,11 +78,19 @@ class UserController {
 
 
 
-    async resetPassword(req, res, next){
+    async changePassword(req, res, next){
         try {
-            const {id, token} = req.params;
-            const {password} = req.body;
-            console.log(token)
+            const {email, password, salt} = req.body;
+            const userData = await UserService.changePassword(email, password, salt)
+            return res.json(userData)
+        } catch (e) {
+            next(e);
+        }
+    }
+
+    async checklink(req, res, next){
+        try {
+            const {token} = req.params;
             const userData = await UserService.resetPassword(id, token, password)
             return res.json(userData)
         } catch (e) {

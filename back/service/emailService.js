@@ -31,7 +31,7 @@ class mailService {
                 `
         })
     }
-    async SendForgot(email, id, payload){
+    async SendForgot(email, code){
         console.log(email)
         try {
             await this.transporter.sendMail({
@@ -42,8 +42,8 @@ class mailService {
                 html:
                     `
                     <div>
-                        <h1>Перейдите по ссылке для сброса пароля</h1>
-                        <a style="font-size: 30px" href="http://localhost:5001/api/reset-password/${id}/${payload}">Сброс</a>
+                        <h1>ВАШ КОД: ${code}</h1>
+                        
                     </div>
                     `
             })

@@ -5,11 +5,11 @@ const router = new Router();
 router.post('/registration', UserController.registration);
 router.post('/login', UserController.login);
 router.post('/logout', UserController.logout);
-router.post('/forgotEmail', UserController.forgotMail)
-router.post('/changePassword', UserController.forgotMail)
-router.post('/reset-password/:id/:token', UserController.resetPassword)
+router.post('/sendcode', UserController.sendcode)
+router.post('/changePassword', UserController.changePassword)
 router.get('/activate/:link', UserController.activate)
 router.get('/refresh', UserController.refresh);
+router.get('/checklink', UserController.checklink);
 
 
 export default router;

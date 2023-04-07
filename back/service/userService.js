@@ -27,7 +27,7 @@ class UserService {
       }
 
       const hashPassword = await bcrypt.hash(password, 3);
-      const activationLink = uuidv4();
+      const salt = uuidv4();
       const user = await UserModel.create({email, password: hashPassword, login, activationLink})
 
       const userDto = new UserDto(user);
@@ -42,12 +42,14 @@ class UserService {
       };
     }
 
-    async login(email, password, login){
-      const user = login ? await UserModel.findOne({ login }) : await UserModel.findOne({ email });
+    async login(email, password){
+      const user = await UserModel.findOne({ login : email }) || await UserModel.findOne({ email }) 
       if (!user) {
           throw ApiError.BadRequest(`Пользователя с таким login/email не существует`);
       }
-
+      const salt = uuidv4();
+      user.salt = salt
+      await user.save()
       const isPassEqual = await bcrypt.compare(password, user.password);
       if (!isPassEqual) {
           throw ApiError.BadRequest("Неверный пароль");
@@ -95,32 +97,41 @@ class UserService {
       }
     }
 
-    async mailForgot(email, login){ //тут мы генерируем ссылку
-      const user = login ? await UserModel.findOne({ login }) : await UserModel.findOne({ email });
+    async sendcode(email, code){ //тут мы генерируем ссылку
+
+      const user = await UserModel.findOne({ login : email }) || await UserModel.findOne({ email }) 
+      const salt = uuidv4();
+      user.salt = salt
+      await user.save()
+      console.log(salt)
       if (!user) {
         throw ApiError.BadRequest(`Пользователя с таким login/email не существует`);;
       }
-      const payload = {
-        id: user._id,
-        email: user.email
+      await emailService.SendForgot(user.email, code)
+      return {
+        'salt':salt
       }
-      const secret = process.env.RESETLINK + user._id;
-      const token = jwt.sign(payload, secret, {expiresIn:'30s'})
-      await emailService.SendForgot(user.email, user._id, token)
-      return {'response':'Письмо было отправлено'}
     }
 
-    async resetPassword(id, token, password){ //тут мы проверяем валидность и перезаписываем пароль
-      const secret = process.env.RESETLINK + id;
-      const payload = jwt.verify(token, secret)
-      if (!payload) {
-        throw ApiError.BadRequest('Неверная ссылка')
+    async changePassword(email, password, salt){ //тут мы проверяем валидность и перезаписываем пароль
+      const user = await UserModel.findOne({ login : email }) || await UserModel.findOne({ email }) 
+      console.log(user.salt)
+      console.log(salt)
+      if (user.salt === salt){
+        const hashPassword = await bcrypt.hash(password, 3);
+        const salt = uuidv4();
+        user.password = hashPassword;
+        user.salt = salt
+        await user.save();
+        return {
+          'status':'ok'
+        }
+      } else {
+        throw ApiError.BadRequest(`Ошибка доступа`);
       }
-      if (id !== payload.id){
-        throw ApiError.BadRequest('Неверная ссылка')
-      }
-      const hashPassword = await bcrypt.hash(password, 3);
-      await UserModel.findByIdAndUpdate({_id: payload.id}, {password: hashPassword})
+    }
+    async checklink(token){
+      
     }
 }
 

@@ -21,12 +21,6 @@ export default async function (req, res, next){
         if(!userData){
             return next(ApiError.UnauthorizedError());
         }
-      
-        const pat = await UserModel.findById(userData.id)
-        
-        if(!pat){
-            return next(ApiError.UnauthorizedError());
-        }
         req.user = userData;
         next();
     } catch (e) {
