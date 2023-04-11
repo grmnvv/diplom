@@ -11,7 +11,7 @@ class UserController {
 
             return res.json(userData);
         } catch (e) {
-            next(e);
+            console.log(e);
         }
         
       }

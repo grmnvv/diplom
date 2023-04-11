@@ -28,7 +28,7 @@ class UserService {
 
       const hashPassword = await bcrypt.hash(password, 3);
       const salt = uuidv4();
-      const user = await UserModel.create({email, password: hashPassword, login, activationLink})
+      const user = await UserModel.create({email, password: hashPassword, login, salt})
 
       const userDto = new UserDto(user);
 
