@@ -86,4 +86,11 @@ export default class Store {
             console.log(e.response?.data?.message)
         }
     }
+    async recWord(image){
+        try {
+            
+        } catch (e) {
+            
+        }
+    }
 }
