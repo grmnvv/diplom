@@ -4,172 +4,21 @@ import useImage from "use-image";
 import { v4 as uuidv4 } from "uuid";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
+import axios from "axios";
+import BoundingBox from "./BoundingBox/BoundingBox";
+import CroppedImage from "./CroppedImage/CroppedImage";
 
-const MIN_RECT_SIZE = 20;
+const MIN_RECT_SIZE = 10;
 
 const randomColor = () => {
   return "#" + Math.floor(Math.random() * 16777215).toString(16);
-};
-
-const ResizeAnchor = ({ x, y, onDragMove, onDragEnd }) => {
-  return (
-    <Circle
-      x={x}
-      y={y}
-      radius={6}
-      fill="white"
-      stroke="black"
-      strokeWidth={1}
-      draggable
-      onDragMove={onDragMove}
-      onDragEnd={onDragEnd}
-    />
-  );
-};
-
-const BoundingBox = ({
-  rect,
-  onDragMove,
-  onResize,
-  onSelect,
-  selected,
-  onDragEnd,
-  onResizeEnd,
-}) => {
-  const handleSelect = () => {
-    onSelect(rect.id);
-  };
-
-
-  const anchorPositions = [
-    { x: "x", y: "y" },
-    { x: "x", y: "y", offsetX: "width" },
-    { x: "x", y: "y", offsetY: "height" },
-    { x: "x", y: "y", offsetX: "width", offsetY: "height" },
-  ];
-
-  return (
-    <>
-      <Rect
-        x={rect.x}
-        y={rect.y}
-        width={rect.width}
-        height={rect.height}
-        fill={rect.color}
-        opacity={selected ? 0.6 : 0.4}
-        draggable
-        onDragMove={onDragMove}
-        onDragEnd={onDragEnd}
-        onClick={handleSelect}
-      />
-      {selected && (
-        <>
-          {anchorPositions.map((point, index) => (
-            <ResizeAnchor
-              key={index}
-              x={rect[point.x] + (point.offsetX ? rect[point.offsetX] : 0)}
-              y={rect[point.y] + (point.offsetY ? rect[point.offsetY] : 0)}
-              onDragMove={(e) => onResize(e, index)}
-              onDragEnd={onResizeEnd}
-            />
-          ))}
-        </>
-      )}
-    </>
-  );
-};
-
-const CroppedImage = ({ image, rect, onFilenameChange, filenames }) => {
-  const canvasRef = useRef(null);
-  const [inputValue, setInputValue] = useState("");
-
-  useEffect(() => {
-    if (!canvasRef.current || !image) return;
-
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(
-      image,
-      rect.x,
-      rect.y,
-      rect.width,
-      rect.height,
-      0,
-      0,
-      rect.width,
-      rect.height
-    );
-  }, [image, rect]);
-
-  const handleFilenameChange = (e) => {
-    onFilenameChange(rect.id, e.target.value);
-  };
-
-  const handleInputChange = (e) => {
-    setInputValue(e.target.value);
-  };
-
-  const dataURLtoBlob = (dataURL) => {
-    const binary = atob(dataURL.split(",")[1]);
-    const array = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) {
-      array[i] = binary.charCodeAt(i);
-    }
-    return new Blob([array], { type: "image/jpeg" });
-  };
-
-  const sendRequest = async () => {
-    const canvas = canvasRef.current;
-    const imageDataUrl = canvas.toDataURL("image/jpeg");
-    const imageBlob = dataURLtoBlob(imageDataUrl);
-
-    const formData = new FormData();
-    formData.append("image", imageBlob);
-
-    try {
-      const response = await fetch("http://127.0.0.1:8000/word", {
-        method: "POST",
-        body: formData,
-      });
-      const result = await response.json();
-      console.log(result);
-      setInputValue(result.result);
-    } catch (error) {
-      console.error("Ошибка отправки запроса:", error);
-    }
-  };
-
-  return (
-    <div>
-      <canvas
-        ref={canvasRef}
-        width={rect.width}
-        height={rect.height}
-        style={{ border: "1px solid black" }}
-      />
-      <p>
-        x: {rect.x}, y: {rect.y}, width: {rect.width}, height: {rect.height}
-      </p>
-      <label>
-        Имя файла:
-        <input
-          type="text"
-          value={filenames[rect.id] || ""}
-          onChange={handleFilenameChange}
-        />
-      </label>
-      <button onClick={sendRequest}>Отправить</button>
-    </div>
-  );
 };
 
 const ImageAnnotation = ({
   imageURL,
   rects: initialRects,
   onRectsChange,
-  allCanvasRects,
+  saveAllCroppedImages
 }) => {
   const [image] = useImage(imageURL);
   const [rects, setRects] = useState(initialRects);
@@ -214,8 +63,6 @@ const ImageAnnotation = ({
     };
   }, [rects, selectedRectId]);
 
-  
-
   const dataURLtoBlob = (dataURL) => {
     const binary = atob(dataURL.split(",")[1]);
     const array = new Uint8Array(binary.length);
@@ -249,13 +96,8 @@ const ImageAnnotation = ({
     formData.append("image", imageBlob);
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/word", {
-        method: "POST",
-        body: formData,
-      });
-      const result = await response.json();
-      console.log(result);
-      setFilenames({ ...filenames, [rect.id]: result.result });
+      const response = await axios.post("http://127.0.0.1:8000/word", formData);
+      return response.data.result;
     } catch (error) {
       console.error("Ошибка отправки запроса:", error);
     }
@@ -271,31 +113,41 @@ const ImageAnnotation = ({
       height: 0,
       id: uuidv4(),
       color: randomColor(),
+      name: "",
     });
   };
 
-  const handleMouseUp = () => {
+  const handleMouseUp = async () => {
     if (drawing && currentRect) {
       if (
         currentRect.width >= MIN_RECT_SIZE &&
         currentRect.height >= MIN_RECT_SIZE
       ) {
-        setRects([...rects, currentRect]);
-        sendRequest(currentRect);
+        const result = await sendRequest(currentRect);
+        console.log(result)
+        setRects([...rects, { ...currentRect, name: result }]);
       }
       setCurrentRect(null);
     }
     setDrawing(false);
   };
-  const handleDragEnd = (e, index) => {
+  const handleDragEnd = async (e, index) => {
     const newRects = rects.slice();
     newRects[index] = { ...newRects[index], x: e.target.x(), y: e.target.y() };
-    setRects(newRects);
+
     sendRequest(newRects[index]);
+    const result = await sendRequest(newRects[index]);
+    const updatedRects = rects.map((r) => {
+      if (r.id === newRects[index].id) {
+        return {
+          ...r,
+          name: result,
+        };
+      }
+      return r;
+    });
+    setRects(updatedRects);
   };
-
-
-
 
   const handleMouseMove = (e) => {
     if (!drawing) return;
@@ -312,9 +164,19 @@ const ImageAnnotation = ({
     newRects[index] = { ...newRects[index], x: e.target.x(), y: e.target.y() };
     setRects(newRects);
   };
-  const handleResizeEnd = (index) => {
+  const handleResizeEnd = async (index) => {
     const rect = rects[index];
-    sendRequest(rect);
+    const result = await sendRequest(rect);
+    const updatedRects = rects.map((r) => {
+      if (r.id === rect.id) {
+        return {
+          ...r,
+          name: result,
+        };
+      }
+      return r;
+    });
+    setRects(updatedRects);
   };
 
   const handleResize = (e, index, anchorIndex) => {
@@ -333,13 +195,11 @@ const ImageAnnotation = ({
     if (anchorIndex === 0 || anchorIndex === 1) {
       newY = pos.y;
       newHeight = rects[index].height - (pos.y - rects[index].y);
-
     } else {
       newY = rects[index].y;
       newHeight = pos.y - rects[index].y;
     }
 
-    
     newRects[index] = {
       ...newRects[index],
       x: newX,
@@ -351,11 +211,18 @@ const ImageAnnotation = ({
     setRects(newRects);
   };
 
-  const handleFilenameChange = (rectId, filename) => {
-    setFilenames({ ...filenames, [rectId]: filename });
+  const handleFilenameChange = (rect, name) => {
+    const updatedRects = rects.map((r) => {
+      if (r.id === rect.id) {
+        return {
+          ...r,
+          name: name,
+        };
+      }
+      return r;
+    });
+    setRects(updatedRects);
   };
-
-
 
   const saveCroppedImages = async () => {
     const zip = new JSZip();
@@ -380,7 +247,7 @@ const ImageAnnotation = ({
       const blob = await new Promise((resolve) =>
         canvas.toBlob(resolve, "image/jpeg")
       );
-      const filename = filenames[rect.id] || `image_${rect.id}`;
+      const filename = rect.name || `image_${rect.id}`;
       folder.file(`${filename}.jpeg`, blob);
     }
 
@@ -388,7 +255,6 @@ const ImageAnnotation = ({
       .generateAsync({ type: "blob" })
       .then((content) => saveAs(content, "cropped_images.zip"));
   };
-
 
   return (
     <div>
@@ -422,7 +288,6 @@ const ImageAnnotation = ({
             key={rect.id}
             image={image}
             rect={rect}
-            filenames={filenames}
             onFilenameChange={handleFilenameChange}
           />
         ))}
@@ -430,7 +295,9 @@ const ImageAnnotation = ({
       <button onClick={saveCroppedImages}>
         Сохранить нарезанные изображения
       </button>
-
+      <button onClick={saveAllCroppedImages}>
+        Сохранить
+      </button>
     </div>
   );
 };

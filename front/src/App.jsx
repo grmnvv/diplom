@@ -4,7 +4,9 @@ import LoginPage from "./pages/login/login";
 import RegisterPage from "./pages/registration/register";
 import { observer } from "mobx-react-lite";
 import Forgot from "./pages/forgot/forgot";
-import ALL from "./components/canvas/canvas";
+import Canvas from "./project/canvas/Canvas";
+import NewProject from "./project/NewProject/NewProject";
+import Projects from "./project/Projects/Projects";
 
 const App = () => {
   return(
@@ -12,7 +14,9 @@ const App = () => {
       <Route path="/login" element={<LoginPage/>}/>
       <Route path="/registration" element={<RegisterPage/>}/>
       <Route path="/reset-password" element={<Forgot/> }/>
-      <Route path="/test" element={<ALL/> }/>
+      <Route path="/projects" element={<Projects/> }/>
+      <Route path="/project" element={<Canvas/> }/>
+      <Route path="/project/new" element={<NewProject/> }/>
     </Routes>
   );
 }

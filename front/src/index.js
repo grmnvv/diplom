@@ -2,7 +2,7 @@ import React, {createContext} from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
-import Aug from './pages/augmentation/augmentation';
+import Aug from './project/canvas/ImageAnnotation/ImageAnnotation';
 import Store from './store/store';
 import {BrowserRouter} from 'react-router-dom'
 import LoginPage from './pages/login/login';
@@ -25,5 +25,10 @@ root.render(
 
   </Context.Provider>
 );
+
+
+
+
+
 
 
