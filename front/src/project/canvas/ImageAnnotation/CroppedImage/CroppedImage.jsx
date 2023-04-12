@@ -15,10 +15,10 @@ const CroppedImage = ({ image, rect, onFilenameChange }) => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(
         image,
-        rect.x,
-        rect.y,
-        rect.width,
-        rect.height,
+        rect.x ,
+        rect.y ,
+        rect.width ,
+        rect.height ,
         0,
         0,
         rect.width,

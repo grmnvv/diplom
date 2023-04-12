@@ -26,8 +26,8 @@ const ImageAnnotation = ({
   const [currentRect, setCurrentRect] = useState(null);
   const [selectedRectId, setSelectedRectId] = useState(null);
   const rectsRef = useRef(rects);
+  const [scale, setScale] = useState(1);
 
-  const [filenames, setFilenames] = useState({});
 
   useEffect(() => {
     setRects(initialRects);
@@ -72,6 +72,10 @@ const ImageAnnotation = ({
     return new Blob([array], { type: "image/jpeg" });
   };
 
+  const handleScaleChange = (e) => {
+    setScale(parseFloat(e.target.value));
+  };
+
   const sendRequest = async (rect) => {
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
@@ -81,7 +85,7 @@ const ImageAnnotation = ({
       image,
       rect.x,
       rect.y,
-      rect.width,
+      rect.width ,
       rect.height,
       0,
       0,
@@ -107,8 +111,8 @@ const ImageAnnotation = ({
     setDrawing(true);
     const pos = e.target.getStage().getPointerPosition();
     setCurrentRect({
-      x: pos.x,
-      y: pos.y,
+      x: pos.x / scale,
+      y: pos.y / scale,
       width: 0,
       height: 0,
       id: uuidv4(),
@@ -133,7 +137,7 @@ const ImageAnnotation = ({
   };
   const handleDragEnd = async (e, index) => {
     const newRects = rects.slice();
-    newRects[index] = { ...newRects[index], x: e.target.x(), y: e.target.y() };
+    newRects[index] = { ...newRects[index], x: e.target.x() / scale, y: e.target.y() / scale};
 
     sendRequest(newRects[index]);
     const result = await sendRequest(newRects[index]);
@@ -154,14 +158,14 @@ const ImageAnnotation = ({
     const pos = e.target.getStage().getPointerPosition();
     setCurrentRect({
       ...currentRect,
-      width: pos.x - currentRect.x,
-      height: pos.y - currentRect.y,
+      width: (pos.x - currentRect.x * scale) / scale,
+      height: (pos.y - currentRect.y * scale) / scale,
     });
   };
 
   const handleDragMove = (e, index) => {
     const newRects = rects.slice();
-    newRects[index] = { ...newRects[index], x: e.target.x(), y: e.target.y() };
+    newRects[index] = { ...newRects[index], x: e.target.x() / scale, y: e.target.y() / scale};
     setRects(newRects);
   };
   const handleResizeEnd = async (index) => {
@@ -185,19 +189,19 @@ const ImageAnnotation = ({
     let newWidth, newX, newY, newHeight;
 
     if (anchorIndex === 0 || anchorIndex === 2) {
-      newX = pos.x;
-      newWidth = rects[index].width - (pos.x - rects[index].x);
+      newX = pos.x / scale;
+      newWidth = rects[index].width - (pos.x / scale - rects[index].x);
     } else {
       newX = rects[index].x;
-      newWidth = pos.x - rects[index].x;
+      newWidth = pos.x / scale - rects[index].x;
     }
 
     if (anchorIndex === 0 || anchorIndex === 1) {
-      newY = pos.y;
-      newHeight = rects[index].height - (pos.y - rects[index].y);
+      newY = pos.y / scale;
+      newHeight = rects[index].height - (pos.y / scale - rects[index].y);
     } else {
       newY = rects[index].y;
-      newHeight = pos.y - rects[index].y;
+      newHeight = pos.y / scale - rects[index].y;
     }
 
     newRects[index] = {
@@ -234,10 +238,10 @@ const ImageAnnotation = ({
       canvas.height = rect.height;
       ctx.drawImage(
         image,
-        rect.x,
-        rect.y,
-        rect.width,
-        rect.height,
+        rect.x / scale,
+        rect.y / scale,
+        rect.width / scale,
+        rect.height / scale,
         0,
         0,
         rect.width,
@@ -257,49 +261,77 @@ const ImageAnnotation = ({
   };
 
   return (
-    <div>
-      <Stage
-        width={image ? image.width : 0}
-        height={image ? image.height : 0}
-        onMouseDown={handleMouseDown}
-        onMouseUp={handleMouseUp}
-        onMouseMove={handleMouseMove}
-      >
-        <Layer>
-          <Image image={image} />
-          {rects.map((rect, index) => (
-            <BoundingBox
-              key={rect.id}
-              rect={rect}
-              onDragMove={(e) => handleDragMove(e, index)}
-              onDragEnd={(e) => handleDragEnd(e, index)}
-              onResize={(e, anchorIndex) => handleResize(e, index, anchorIndex)}
-              onResizeEnd={(e) => handleResizeEnd(index)}
-              onSelect={setSelectedRectId}
-              selected={selectedRectId === rect.id}
+    <div style={{ display: "flex", width:"100%" ,height: "100vh", overflow: "hidden" }}>
+      <div style={{ width: "80%", maxWidth: "80%"}}>
+        <div style={{ display: "flex", justifyContent: "space-between", flexDirection:"column",width:"100%", height:"100%" }}>
+          <Stage
+            width={image ? image.width * scale : 0}
+            height={image ? image.height * scale : 0}
+            onMouseDown={handleMouseDown}
+            onMouseUp={handleMouseUp}
+            onMouseMove={handleMouseMove}
+          >
+            <Layer>
+              <Image image={image} width={image ? image.width * scale : 0} height={image ? image.height * scale : 0}/>
+              {rects.map((rect, index) => (
+                <BoundingBox
+                  key={rect.id}
+                  rect={rect}
+                  onDragMove={(e) => handleDragMove(e, index)}
+                  onDragEnd={(e) => handleDragEnd(e, index)}
+                  onResize={(e, anchorIndex) => handleResize(e, index, anchorIndex)}
+                  onResizeEnd={(e) => handleResizeEnd(index)}
+                  onSelect={setSelectedRectId}
+                  selected={selectedRectId === rect.id}
+                  scale={scale}
+                />
+              ))}
+              {currentRect && drawing && <BoundingBox rect={currentRect} scale={scale}/>}
+            </Layer>
+          </Stage>
+          <div style={{minWidth:"100%", display:"flex",zIndex:1, justifyContent:"center", }}>
+            <input
+              type="range"
+              min="0.1"
+              max="1"
+              step="0.005"
+              value={scale}
+              onChange={handleScaleChange}
+              style={{ width: "200px" }}
             />
-          ))}
-          {currentRect && drawing && <BoundingBox rect={currentRect} />}
-        </Layer>
-      </Stage>
-      <div>
+        </div>
+        </div>
+        
+      </div>
+      <div
+        style={{
+          width:'20%',
+          zIndex:1,
+          overflowY: "auto",
+          borderLeft: "1px solid #ccc",
+          paddingLeft: "10px",
+        }}
+      >
         {rects.map((rect) => (
           <CroppedImage
             key={rect.id}
             image={image}
             rect={rect}
             onFilenameChange={handleFilenameChange}
-          />
-        ))}
+            />
+          ))}
+          <div>
+            <button onClick={saveCroppedImages}>
+              Сохранить нарезанные изображения
+            </button>
+          </div>
+          <div>
+            <button onClick={saveAllCroppedImages}>Сохранить</button>
+          </div>
+        </div>
       </div>
-      <button onClick={saveCroppedImages}>
-        Сохранить нарезанные изображения
-      </button>
-      <button onClick={saveAllCroppedImages}>
-        Сохранить
-      </button>
-    </div>
-  );
-};
-
-export default ImageAnnotation;
+    );
+  };
+  
+  export default ImageAnnotation;
+  

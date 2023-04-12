@@ -122,7 +122,7 @@ const Canvas = () => {
             />
           ))}
         </div>
-        <div>
+        <div style={{width:"100%"}}>
           {selectedImageIndex !== null && (
             <ImageAnnotation
               imageURL={imagesData[selectedImageIndex].url}

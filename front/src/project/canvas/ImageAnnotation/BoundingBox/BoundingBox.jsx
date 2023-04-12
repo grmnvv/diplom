@@ -11,11 +11,13 @@ const BoundingBox = ({
     selected,
     onDragEnd,
     onResizeEnd,
+    scale
     }) => {
     const handleSelect = () => {
         onSelect(rect.id);
     };
 
+    console.log(scale)
     const anchorPositions = [
         { x: "x", y: "y" },
         { x: "x", y: "y", offsetX: "width" },
@@ -26,10 +28,10 @@ const BoundingBox = ({
     return (
         <>
         <Rect
-            x={rect.x}
-            y={rect.y}
-            width={rect.width}
-            height={rect.height}
+            x={rect.x * scale}
+            y={rect.y * scale}
+            width={rect.width * scale}
+            height={rect.height * scale}
             fill={rect.color}
             opacity={selected ? 0.6 : 0.4}
             draggable
@@ -42,8 +44,8 @@ const BoundingBox = ({
             {anchorPositions.map((point, index) => (
                 <ResizeAnchor
                 key={index}
-                x={rect[point.x] + (point.offsetX ? rect[point.offsetX] : 0)}
-                y={rect[point.y] + (point.offsetY ? rect[point.offsetY] : 0)}
+                x={(rect[point.x] + (point.offsetX ? rect[point.offsetX] : 0)) * scale}
+                y={(rect[point.y] + (point.offsetY ? rect[point.offsetY] : 0)) * scale}
                 onDragMove={(e) => onResize(e, index)}
                 onDragEnd={onResizeEnd}
                 />
