@@ -1,0 +1,32 @@
+.projectsContainer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    padding: 100px 30px;
+  }
+  
+  .projectCard {
+    width: 250px;
+    height: 150px;
+    background-color: #f2f2f2;
+    margin: 0 30px 100px 0;
+    border-radius: 15px;
+    padding: 15px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  
+  .newProjectCard {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  p{
+    margin: 5px 0;
+  }
+  h2{
+    margin: 5px 0;
+  }

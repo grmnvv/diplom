@@ -123,18 +123,37 @@ const ImageAnnotation = ({
 
   const handleMouseUp = async () => {
     if (drawing && currentRect) {
+      let finalRect = currentRect;
+  
+      if (currentRect.width < 0) {
+        finalRect = {
+          ...finalRect,
+          x: currentRect.x + currentRect.width,
+          width: -currentRect.width,
+        };
+      }
+  
+      if (currentRect.height < 0) {
+        finalRect = {
+          ...finalRect,
+          y: currentRect.y + currentRect.height,
+          height: -currentRect.height,
+        };
+      }
+  
       if (
-        currentRect.width >= MIN_RECT_SIZE &&
-        currentRect.height >= MIN_RECT_SIZE
+        finalRect.width >= MIN_RECT_SIZE &&
+        finalRect.height >= MIN_RECT_SIZE
       ) {
-        const result = await sendRequest(currentRect);
-        console.log(result)
-        setRects([...rects, { ...currentRect, name: result }]);
+        const result = await sendRequest(finalRect);
+        setRects([...rects, { ...finalRect, name: result }]);
+        console.log(finalRect)
       }
       setCurrentRect(null);
     }
     setDrawing(false);
   };
+  
   const handleDragEnd = async (e, index) => {
     const newRects = rects.slice();
     newRects[index] = { ...newRects[index], x: e.target.x() / scale, y: e.target.y() / scale};
@@ -170,19 +189,43 @@ const ImageAnnotation = ({
   };
   const handleResizeEnd = async (index) => {
     const rect = rects[index];
-    const result = await sendRequest(rect);
+    let newX = rect.x;
+    let newY = rect.y;
+    let newWidth = rect.width;
+    let newHeight = rect.height;
+  
+    if (newWidth < 0) {
+      newX += newWidth;
+      newWidth = -newWidth;
+    }
+  
+    if (newHeight < 0) {
+      newY += newHeight;
+      newHeight = -newHeight;
+    }
+  
+    const updatedRect = {
+      ...rect,
+      x: newX,
+      y: newY,
+      width: newWidth,
+      height: newHeight,
+    };
+  
+    const result = await sendRequest(updatedRect);
     const updatedRects = rects.map((r) => {
       if (r.id === rect.id) {
         return {
-          ...r,
+          ...updatedRect,
           name: result,
         };
       }
       return r;
     });
+  
     setRects(updatedRects);
   };
-
+  
   const handleResize = (e, index, anchorIndex) => {
     const newRects = rects.slice();
     const pos = e.target.getStage().getPointerPosition();
@@ -262,11 +305,12 @@ const ImageAnnotation = ({
 
   return (
     <div style={{ display: "flex", width:"100%" ,height: "100vh", overflow: "hidden" }}>
-      <div style={{ width: "80%", maxWidth: "80%"}}>
-        <div style={{ display: "flex", justifyContent: "space-between", flexDirection:"column",width:"100%", height:"100%" }}>
+      <div style={{ width: "80%", maxWidth: "80%" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", flexDirection:"column",width:"100%", height:"100%", overflow: "auto" }}>
           <Stage
             width={image ? image.width * scale : 0}
             height={image ? image.height * scale : 0}
+            scale={scale}
             onMouseDown={handleMouseDown}
             onMouseUp={handleMouseUp}
             onMouseMove={handleMouseMove}
@@ -293,7 +337,7 @@ const ImageAnnotation = ({
             <input
               type="range"
               min="0.1"
-              max="1"
+              max="2"
               step="0.005"
               value={scale}
               onChange={handleScaleChange}

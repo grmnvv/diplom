@@ -1,9 +1,11 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import ImageAnnotation from "./ImageAnnotation/ImageAnnotation";
 import { Context } from "../..";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import styles from './Canvas.module.css'
+import { observer } from "mobx-react-lite";
+import { useParams } from "react-router-dom";
 
 const Thumbnail = ({ image, onClick }) => {
   return <img src={image.url} alt="thumbnail" width="100" onClick={onClick} />;
@@ -13,27 +15,35 @@ const Canvas = () => {
   const [imagesData, setImagesData] = useState([]);
   const [selectedImageIndex, setSelectedImageIndex] = useState(null);
   const [allCanvasRect, setAllCanvasRect] = useState([]);
-
-  const handleFileChange = (e) => {
-    if (e.target.files) {
-      const fileReadPromises = Array.from(e.target.files).map((file) => {
-        return new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            resolve({ url: e.target.result, rects: [], name: file.name });
-          };
-          reader.readAsDataURL(file);
-        });
-      });
+  const {store} = useContext(Context);
+  const {id} = useParams();
   
-      Promise.all(fileReadPromises).then((newImagesData) => {
-        setImagesData([...imagesData, ...newImagesData]);
-      });
+  useEffect(() => {
+    store.getProject()
+    store.selectProject(id)
+  }, []);
+  
+  useEffect(() => {
+    if (store.isLoading == false) {
+      store.selectProject(id)
+      if (store.Project.id !== '') {
+
+        setImagesData(store.Project.imageData);
+        console.log(store.Project)
+      }
     }
-  };
+
+  }, [store.Project,store.isLoading]);
 
   const handleImageClick = (index) => {
+
     setSelectedImageIndex(index);
+  };
+
+  const saveToProject = () => {
+    store.Project.imageData = imagesData;
+    store.saveProject()
+    console.log("Сохранено в проект.");
   };
 
   const handleRectsChange = (newRects) => {
@@ -104,16 +114,10 @@ const Canvas = () => {
   return (
     <div className={styles.project}>
       <div>
-      <input
-        type="file"
-        accept="image/*"
-        multiple
-        onChange={handleFileChange}
-      />
       </div>
 
       <div className={styles.workspace}>
-        <div>
+        <div className={styles.thumbnail}>
           {imagesData.map((imageData, index) => (
             <Thumbnail
               key={index}
@@ -122,7 +126,7 @@ const Canvas = () => {
             />
           ))}
         </div>
-        <div style={{width:"100%"}}>
+        <div className={styles.imageannotation}>
           {selectedImageIndex !== null && (
             <ImageAnnotation
               imageURL={imagesData[selectedImageIndex].url}
@@ -132,11 +136,10 @@ const Canvas = () => {
             />
           )}
         </div>
-        
-        
+        <button onClick={saveToProject}>Сохранить в проект</button>
       </div>
     </div>
   );
 };
 
-export default Canvas;
+export default observer(Canvas);

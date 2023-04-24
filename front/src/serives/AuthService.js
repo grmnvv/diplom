@@ -17,4 +17,14 @@ export default class AuthService {
     static async changePassword(email, password, salt){
         return $api.post('/changePassword', {email, password, salt})
     }
+    static async createProject(formData){
+        console.log(formData)
+        return $api.post('/createProject', formData, {headers: {'Content-Type': 'multipart/form-data' }})
+    }
+    static async getProject(){
+        return $api.get(`/getProjects`)
+    }
+    static async saveProject(project){
+        return $api.post(`/saveProject`, {project})
+    }
 }

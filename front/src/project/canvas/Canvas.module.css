@@ -8,3 +8,11 @@
 .workspace{
     display: flex;
 }
+.thumbnail{
+    width: 10%;
+}
+
+.imageannotation{
+    width: 100%;
+
+}

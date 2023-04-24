@@ -17,8 +17,7 @@ const ForgotPage = () => {
         return await store.sendCode(email, Acode)
     }
     function checkCode(){
-        console.log(enter)
-        console.log(code)
+
         if(enter == code){
 
             console.log('Everything is good')

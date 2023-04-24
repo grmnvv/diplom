@@ -64,12 +64,12 @@ const CroppedImage = ({ image, rect, onFilenameChange }) => {
     };
   
     return (
-      <div>
+      <div >
         <canvas
           ref={canvasRef}
           width={rect.width}
           height={rect.height}
-          style={{ border: "1px solid black" }}
+          style={{ border: "1px solid black", maxWidth:'300px', maxHeight:'200px' }}
         />
         <p>
           x: {rect.x}, y: {rect.y}, width: {rect.width}, height: {rect.height}

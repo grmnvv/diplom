@@ -17,7 +17,6 @@ const BoundingBox = ({
         onSelect(rect.id);
     };
 
-    console.log(scale)
     const anchorPositions = [
         { x: "x", y: "y" },
         { x: "x", y: "y", offsetX: "width" },

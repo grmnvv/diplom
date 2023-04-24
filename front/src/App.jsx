@@ -7,6 +7,7 @@ import Forgot from "./pages/forgot/forgot";
 import Canvas from "./project/canvas/Canvas";
 import NewProject from "./project/NewProject/NewProject";
 import Projects from "./project/Projects/Projects";
+import ConnectionChecker from "./pages/profile/profile";
 
 const App = () => {
   return(
@@ -15,8 +16,9 @@ const App = () => {
       <Route path="/registration" element={<RegisterPage/>}/>
       <Route path="/reset-password" element={<Forgot/> }/>
       <Route path="/projects" element={<Projects/> }/>
-      <Route path="/project" element={<Canvas/> }/>
+      <Route path="/project/:id" element={<Canvas/> }/>
       <Route path="/project/new" element={<NewProject/> }/>
+      <Route path="/profile" element={<ConnectionChecker/> }/>
     </Routes>
   );
 }
