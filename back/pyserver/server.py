@@ -13,7 +13,7 @@ origins = [
     'http://localhost:3000'
     
 ]
-model = TextModel('/Users/egorgarmanov/Machine Learning/CheckIn/WonePassportDocker/wonePassports/tuning3.hdf5')
+model = TextModel('/Users/egorgarmanov/Machine Learning/CheckIn/WonePassportDocker/wonePassports/models/textdetection/textrecognition.hdf5')
 
 app.add_middleware(
     CORSMiddleware,

@@ -20,6 +20,7 @@ router.post('/logout', UserController.logout);
 router.post('/sendcode', UserController.sendcode)
 router.post('/changePassword', UserController.changePassword)
 router.post('/createProject', upload.array("images"), UserController.createProject)
+router.delete('/deleteProject/:id', UserController.deleteProject)
 router.post('/saveProject', UserController.saveProject)
 router.get('/activate/:link', UserController.activate)
 router.get('/refresh', UserController.refresh);

@@ -180,17 +180,35 @@ class UserService {
 
   async saveProject(project, refreshToken) {
     try {
+        const user = tokenService.validateRefreshToken(refreshToken)
+
+        let proj = await projectModel.findOne({ id: project.id, user: user.id });
+        if (proj) {
+            const currentUrls = proj.imageData.map((image) => image.url);
+            Object.assign(proj, project);
+            proj.imageData.forEach((image, index) => {
+                image.url = currentUrls[index];
+            });
+
+            let updatedProj = await projectModel.findOneAndUpdate(
+                { id: proj.id, user: user.id },  // условия поиска
+                proj,  // обновляемые данные
+                { new: true }  // возвращает обновленный документ
+            );
+
+            console.log(updatedProj);
+        }
+    } catch (error) {
+        console.log(error);
+    }
+}
+
+
+  async deleteProject(refreshToken, id) {
+    try {
       const user = tokenService.validateRefreshToken(refreshToken)
-      let proj = await projectModel.findOne({ id: project.id, user: user.id });
-      if (proj) {
-        const currentUrls = proj.imageData.map((image) => image.url);
-        Object.assign(proj, project);
-        proj.imageData.forEach((image, index) => {
-          image.url = currentUrls[index];
-        });
-        await proj.save();
-        console.log(proj);
-      }
+      let proj = await projectModel.findOneAndDelete({ id: id, user: user.id });
+      return proj
     } catch (error) {
       console.log(error);
     }

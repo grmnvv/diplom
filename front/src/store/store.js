@@ -148,7 +148,13 @@ export default class Store {
       console.error(e.response?.data?.message);
     }
   }
-
+  async deleteProject(id) {
+    try {
+      await AuthService.deleteProject(id);
+    } catch (e) {
+      console.error(e.response?.data?.message);
+    }
+  }
   async sendCode(email, code) {
     try {
       const response = await AuthService.sendCode(email, code);

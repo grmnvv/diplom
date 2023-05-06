@@ -8,6 +8,7 @@ import Canvas from "./project/canvas/Canvas";
 import NewProject from "./project/NewProject/NewProject";
 import Projects from "./project/Projects/Projects";
 import ConnectionChecker from "./pages/profile/profile";
+import EditProject from "./project/editProject/EditProject";
 
 const App = () => {
   return(
@@ -17,6 +18,7 @@ const App = () => {
       <Route path="/reset-password" element={<Forgot/> }/>
       <Route path="/projects" element={<Projects/> }/>
       <Route path="/project/:id" element={<Canvas/> }/>
+      <Route path="/project/edit/:id" element={<EditProject/> }/>
       <Route path="/project/new" element={<NewProject/> }/>
       <Route path="/profile" element={<ConnectionChecker/> }/>
     </Routes>

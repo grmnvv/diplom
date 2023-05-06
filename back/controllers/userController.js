@@ -137,7 +137,18 @@ class UserController {
         const { refreshToken } = req.cookies;
         const response = await UserService.saveProject(project, refreshToken)
     } catch (e) {
-        
+      next(e);
+    }
+  }
+  async deleteProject(req, res, next){
+    try {
+        const {id} = req.params;
+        console.log(id)
+        const { refreshToken } = req.cookies;
+        const response = await UserService.deleteProject(refreshToken, id)
+        return res.json(response)
+    } catch (e) {
+      next(e);
     }
   }
 }

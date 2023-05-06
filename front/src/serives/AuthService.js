@@ -30,4 +30,7 @@ export default class AuthService {
     static async saveProject(project){
         return $api.post(`/saveProject`, {project})
     }
+    static async deleteProject(id){
+        return $api.delete(`/deleteProject/${id}`)
+    }
 }
