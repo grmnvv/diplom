@@ -13,7 +13,7 @@ origins = [
     'http://localhost:3000'
     
 ]
-model = TextModel('/Users/egorgarmanov/Machine Learning/CheckIn/WonePassportDocker/wonePassports/models/textdetection/textrecognition.hdf5')
+model = TextModel('/Users/egorgarmanov/Machine Learning/CheckIn/WonePassportDocker/wonePassports/MINIMAL42.hdf5')
 
 app.add_middleware(
     CORSMiddleware,
@@ -28,6 +28,8 @@ async def read_passport(image: bytes = File(...)):
 
     nparr = np.fromstring(image, np.uint8)
     # decode image
+
+
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
 

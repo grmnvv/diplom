@@ -18,9 +18,6 @@ const Projects = () => {
     await store.getProject(); // обновляем список проектов после удаления
   };
 
-  const handleEdit = (id) => {
-
-  };
 
   return (
     <div className={styles.projectsContainer}>

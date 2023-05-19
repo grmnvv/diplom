@@ -1,18 +1,77 @@
 .project{
     display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 50px;
     height: 100vh;
     width: 100vw;
-    flex-direction: column;
+}
+
+.projectTitle{
+    font-size: 2em;
+    margin-bottom: 50px;
 }
 
 .workspace{
     display: flex;
+    gap: 20px;
+    width: 100%;
+    height: 100%;
+}
+
+.block{
+    border: 1px solid #000;
+    border-radius: 13px;
+    padding: 15px;
+    height: 80%;
+    overflow-y: auto;
+}
+
+.thumb{
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
 }
 .thumbnail{
-    width: 10%;
+    width: 15%;
+    border: black 1px solid;
+    border-radius: 13px;
+    padding: 15px;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    overflow:auto;
 }
 
 .imageannotation{
-    width: 100%;
+    width: 85%;
+}
 
+.cropped{
+    width: 20%;
+}
+
+.downloadButton {
+    border: 1px solid #000;
+    border-radius: 13px;
+    width: 100%;
+    height: 80%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 20px;
+}
+
+.thumbnailImage {
+    height: 100px;
+    width: 150px;
+    object-fit: contain;
+    display: block;
+    margin: 15px auto;
+}
+
+.thumbnailTitle {
+    text-align: center;
 }

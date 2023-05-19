@@ -7,10 +7,16 @@ import styles from './Canvas.module.css'
 import { observer } from "mobx-react-lite";
 import { useParams } from "react-router-dom";
 
-const Thumbnail = ({ image, onClick }) => {
-  return <img src={image.url} alt="thumbnail" width="100" onClick={onClick} />;
+const Thumbnail = ({ image, onClick, selected }) => {
+  const thumbnailStyle = selected ? { border: '3px solid red' } : {};
+  
+  return (
+  <div className={styles.thumb} style={thumbnailStyle}>
+    <img src={image.url} alt="thumbnail" width="150" onClick={onClick} />
+    <p>{image.name}</p>
+  </div>
+  )
 };
-
 const Canvas = () => {
   const [imagesData, setImagesData] = useState([]);
   const [selectedImageIndex, setSelectedImageIndex] = useState(null);
@@ -27,7 +33,6 @@ const Canvas = () => {
     if (store.isLoading == false) {
       store.selectProject(id)
       if (store.Project.id !== '') {
-
         setImagesData(store.Project.imageData);
         console.log(store.Project)
       }
@@ -36,8 +41,9 @@ const Canvas = () => {
   }, [store.Project,store.isLoading]);
 
   const handleImageClick = (index) => {
-
+    
     setSelectedImageIndex(index);
+    saveToProject();
   };
 
   const saveToProject = () => {
@@ -113,16 +119,15 @@ const Canvas = () => {
 
   return (
     <div className={styles.project}>
-      <div>
-      </div>
 
       <div className={styles.workspace}>
         <div className={styles.thumbnail}>
-          {imagesData.map((imageData, index) => (
+        {imagesData.map((imageData, index) => (
             <Thumbnail
               key={index}
               image={imageData}
               onClick={() => handleImageClick(index)}
+              selected={index === selectedImageIndex}
             />
           ))}
         </div>
@@ -136,7 +141,6 @@ const Canvas = () => {
             />
           )}
         </div>
-        <button onClick={saveToProject}>Сохранить в проект</button>
       </div>
     </div>
   );

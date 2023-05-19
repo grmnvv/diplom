@@ -1,0 +1,74 @@
+.textEditing {
+    font-size: 24px;
+    margin-bottom: 50px;
+  }
+  
+  .changeName {
+    display: flex;
+    margin: 0 0 50px 0;
+  }
+  
+  .changeNameText {
+    margin: 0 30px 0 0;
+  }
+  
+  .input input{
+    border: none;
+    border-bottom: 1px solid black;
+  }
+  
+  .imagesName {
+    /* необходимые стили, если они нужны */
+    margin-bottom: 50px;
+  }
+  
+  .images {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 40px;
+    margin-bottom: 100px;
+  }
+  
+  .images > div {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 350px;
+    height: 250px;
+  }
+  
+
+  .container {
+    width: 90%;
+    margin: 0 5%;
+  }
+  
+  .images img {
+    height: 250px;
+    width: 350px;
+    object-fit: contain;
+    margin: 0 50px;
+  }
+  
+  
+  .uploadImages {
+    display: flex;
+    justify-content: center;
+    background-color: #f2f2f2;
+    border-radius: 15px;
+    height: 100%;
+    width: 350px;
+    align-items: center;
+  }
+  
+  .submitButton {
+    /* необходимые стили, если они нужны */
+  }
+
+  .underImage{
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+  }
+  

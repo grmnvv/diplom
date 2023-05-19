@@ -72,7 +72,7 @@ const CroppedImage = ({ image, rect, onFilenameChange }) => {
           style={{ border: "1px solid black", maxWidth:'300px', maxHeight:'200px' }}
         />
         <p>
-          x: {rect.x}, y: {rect.y}, width: {rect.width}, height: {rect.height}
+          x, y, w, h: ({rect.x}, {rect.y}), ({rect.width}, {rect.height})
         </p>
         <label>
           Имя файла:

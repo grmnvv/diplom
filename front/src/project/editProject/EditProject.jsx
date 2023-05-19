@@ -18,14 +18,22 @@ const EditProject = () => {
 
   useEffect(() => {
     const projectToEdit = store.allProjects.find((proj) => proj.id === id);
-    console.log(projectToEdit)
+    console.log(projectToEdit);
     if (projectToEdit) {
-      setProject(projectToEdit);
+      setProject({
+        projectName: projectToEdit.name,
+        imagesData: projectToEdit.imageData,
+      });
+      console.log(project);
     } else {
       // Например, перенаправить пользователя обратно к списку проектов
       navigate("/projects");
     }
   }, [id, store]);
+
+  useEffect(() => {
+    console.log(project);
+  }, [project]);
 
   const handleImageDelete = (imageIndex) => {
     const newImagesData = project.imagesData.filter(
@@ -66,36 +74,52 @@ const EditProject = () => {
   };
 
   return (
-    <div>
-      <div>
-        <p>Название проекта</p>
-        <input type="text" value={value} onChange={(e) => setValue(e.target.value)} />
+    <div className={styles.container}>
+      <div className={styles.textEditing}>Редактирование проекта</div>
+      <div className={styles.changeName}>
+        <div className={styles.changeNameText}>Название проекта:</div>
+        <div className={styles.input}>
+          <input
+            type="text"
+            value={project.projectName}
+            onChange={(e) => setProject({ projectName: e.target.value })}
+          />
+        </div>
       </div>
-      <div>
+      <div className={styles.imagesName}>Изображения</div>
+      <div className={styles.images}>
+        <div>
+          <div className={styles.uploadImages}>
+            <label htmlFor="file-input" className="file-upload-button">
+              Добавить изображения
+            </label>
+            <input
+              type="file"
+              id="file-input"
+              name=""
+              onChange={handleFileChange}
+              multiple
+              style={{ display: "none" }}
+            />
+          </div>
+        </div>
         {project.imagesData &&
           project.imagesData.map((imageData, index) => (
             <div key={index}>
-              <img src={imageData.url} alt="project-thumbnail" width="100" />
-              <button onClick={() => handleImageDelete(index)}>
-                Удалить изображение
-              </button>
+              <img src={imageData.url} alt="project-thumbnail" />
+              <div className={styles.underImage}>
+                <div>fileName: {imageData.name}</div>
+                <button onClick={() => handleImageDelete(index)}>
+                  Удалить изображение
+                </button>
+              </div>
             </div>
           ))}
       </div>
-      <div>
-        <label htmlFor="file-input" className="file-upload-button">
-          Добавить изображения
-        </label>
-        <input
-          type="file"
-          id="file-input"
-          name=""
-          onChange={handleFileChange}
-          multiple
-          style={{ display: "none" }}
-        />
+
+      <div className={styles.submitButton}>
+        <button onClick={handleSubmit}>Сохранить изменения</button>
       </div>
-      <button onClick={handleSubmit}>Сохранить изменения</button>
     </div>
   );
 };

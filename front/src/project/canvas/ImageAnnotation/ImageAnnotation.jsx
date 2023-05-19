@@ -26,7 +26,7 @@ const ImageAnnotation = ({
   const [currentRect, setCurrentRect] = useState(null);
   const [selectedRectId, setSelectedRectId] = useState(null);
   const rectsRef = useRef(rects);
-  const [scale, setScale] = useState(1);
+  const [ scale, setScale] = useState(1);
 
 
   useEffect(() => {
@@ -305,34 +305,36 @@ const ImageAnnotation = ({
 
   return (
     <div style={{ display: "flex", width:"100%" ,height: "100vh", overflow: "hidden" }}>
-      <div style={{ width: "80%", maxWidth: "80%" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", flexDirection:"column",width:"100%", height:"100%", overflow: "auto" }}>
-          <Stage
-            width={image ? image.width * scale : 0}
-            height={image ? image.height * scale : 0}
-            scale={scale}
-            onMouseDown={handleMouseDown}
-            onMouseUp={handleMouseUp}
-            onMouseMove={handleMouseMove}
-          >
-            <Layer>
-              <Image image={image} width={image ? image.width * scale : 0} height={image ? image.height * scale : 0}/>
-              {rects.map((rect, index) => (
-                <BoundingBox
-                  key={rect.id}
-                  rect={rect}
-                  onDragMove={(e) => handleDragMove(e, index)}
-                  onDragEnd={(e) => handleDragEnd(e, index)}
-                  onResize={(e, anchorIndex) => handleResize(e, index, anchorIndex)}
-                  onResizeEnd={(e) => handleResizeEnd(index)}
-                  onSelect={setSelectedRectId}
-                  selected={selectedRectId === rect.id}
-                  scale={scale}
-                />
-              ))}
-              {currentRect && drawing && <BoundingBox rect={currentRect} scale={scale}/>}
-            </Layer>
-          </Stage>
+        <div style={{ display: "flex", justifyContent: "space-between", flexDirection:"column",width:"100%", height:"100%" }}>
+          <div style={{display:'flex', justifyContent:'center', alignItems: 'center', width:'100%', height:'100%', border:'1px black solid', borderRadius: '13px', margin: '0 0 10px 0', contain: 'content', overflow: "auto" }}>
+            <Stage
+              width={image ? image.width * scale : 0}
+              height={image ? image.height * scale : 0}
+              scale={scale}
+              onMouseDown={handleMouseDown}
+              
+              onMouseUp={handleMouseUp}
+              onMouseMove={handleMouseMove}
+            >
+              <Layer>
+                <Image image={image} width={image ? image.width * scale : 0} height={image ? image.height * scale : 0}/>
+                {rects.map((rect, index) => (
+                  <BoundingBox
+                    key={rect.id}
+                    rect={rect}
+                    onDragMove={(e) => handleDragMove(e, index)}
+                    onDragEnd={(e) => handleDragEnd(e, index)}
+                    onResize={(e, anchorIndex) => handleResize(e, index, anchorIndex)}
+                    onResizeEnd={(e) => handleResizeEnd(index)}
+                    onSelect={setSelectedRectId}
+                    selected={selectedRectId === rect.id}
+                    scale={scale}
+                  />
+                ))}
+                {currentRect && drawing && <BoundingBox rect={currentRect} scale={scale}/>}
+              </Layer>
+            </Stage>
+          </div>
           <div style={{minWidth:"100%", display:"flex",zIndex:1, justifyContent:"center", }}>
             <input
               type="range"
@@ -344,16 +346,15 @@ const ImageAnnotation = ({
               style={{ width: "200px" }}
             />
         </div>
-        </div>
         
       </div>
       <div
         style={{
           width:'20%',
-          zIndex:1,
           overflowY: "auto",
-          borderLeft: "1px solid #ccc",
-          paddingLeft: "10px",
+          padding: "10px",
+          border: '1px black solid',
+          borderRadius: '13px'
         }}
       >
         {rects.map((rect) => (
