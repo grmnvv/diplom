@@ -20,7 +20,6 @@ const App = () => {
       <Route path="/project/:id" element={<Canvas/> }/>
       <Route path="/project/edit/:id" element={<EditProject/> }/>
       <Route path="/project/new" element={<NewProject/> }/>
-      <Route path="/profile" element={<ConnectionChecker/> }/>
     </Routes>
   );
 }
