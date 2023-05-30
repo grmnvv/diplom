@@ -126,6 +126,7 @@ class UserController {
     try {
       const { refreshToken } = req.cookies;
       const projects = await UserService.getProjects(refreshToken);
+      console.log(projects)
       return res.json(projects);
     } catch (e) {
       next(e);
@@ -135,6 +136,7 @@ class UserController {
     try {
         const {project} = req.body;
         const { refreshToken } = req.cookies;
+        console.log(project)
         const response = await UserService.saveProject(project, refreshToken)
     } catch (e) {
       next(e);

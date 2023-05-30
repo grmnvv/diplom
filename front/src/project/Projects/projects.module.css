@@ -37,7 +37,7 @@
   caret-color: #fff;
   color: #fff;
   font-size: 16px;
-  font-family: 'Source Code Pro';
+  font-family: "Source Code Pro";
 }
 
 .button {
@@ -48,8 +48,9 @@
   cursor: pointer;
   background: #6f6b4e;
   border-radius: 5px;
-  font-size: 16px;
+  font-size: 14px;
   font-family: "Source Code Pro";
+  margin: 0 10px;
 }
 
 .buttons {
@@ -60,8 +61,12 @@
   align-items: center;
 }
 
-.child{
+.child {
   width: 30%;
+  display: flex;
+  flex-direction: column;
+  align-content: center;
+  align-items: center;
 }
 
 .projectCard {
@@ -78,7 +83,7 @@
   font-family: "Source Code Pro";
 }
 
-.error{
+.error {
   font-size: 16px;
   color: #a70000;
   margin: 20px 0 0 0;

@@ -23,7 +23,9 @@ const RegisterPage = () => {
 
 
   const navigate = useNavigate();
-
+  useEffect(() => {
+    store.refresh()
+}, []); 
   useEffect(() => {
     if(store.isAuth){
         navigate('/projects');
@@ -45,6 +47,17 @@ const RegisterPage = () => {
   const validateLogin = () => {
     setLoginValid(login.length > 5);
   };
+  const handlePasswordValidate = (password) => {
+    const validation = {
+      'длина не менее 8 символов': password.length >= 8,
+      'минимум 1 спец. символ': /[-!$%^&*()_+|~=`{}\[\]:";'<>?,.\/]/.test(password),
+      'минимум 2 цифры': (password.match(/\d/g) || []).length >= 2,
+      'минимум 1 заглавная буква': /[A-Z]/.test(password),
+    };
+  
+    return Object.values(validation).every((value) => value === true);
+  };
+  
 
   const validatePassword = (password) => {
     setValidation({
@@ -63,7 +76,10 @@ const RegisterPage = () => {
     validateLogin()
     setStep(true)
     console.log(step)
-    await store.registration(email, password, login);
+    if(emailValid && loginValid && handlePasswordValidate(password)){
+      await store.registration(email, password, login);
+    }
+
   }
   return (
     <div className={styles.center}>

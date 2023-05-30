@@ -16,7 +16,7 @@ const randomColor = () => {
   return "#" + Math.floor(Math.random() * 16777215).toString(16);
 };
 
-const ImageAnnotation = ({ imageURL, rects: initialRects, onRectsChange, saveCRNN, saveYOLO,thumbnailsCollapsed }) => {
+const ImageAnnotation = ({ imageURL, rects: initialRects, onRectsChange, saveCRNN, saveYOLO,thumbnailsCollapsed,saveToProject }) => {
   const [image] = useImage(imageURL);
   const [rects, setRects] = useState(initialRects);
   const [drawing, setDrawing] = useState(false);
@@ -67,9 +67,7 @@ const ImageAnnotation = ({ imageURL, rects: initialRects, onRectsChange, saveCRN
     setRects(initialRects);
   }, [initialRects, imageURL]);
 
-  useEffect(() => {
-    setScale(1);
-  }, [imageURL]);
+
 
   useEffect(() => {
     if (JSON.stringify(rectsRef.current) !== JSON.stringify(rects)) {
@@ -235,7 +233,9 @@ const ImageAnnotation = ({ imageURL, rects: initialRects, onRectsChange, saveCRN
       }
       setCurrentRect(null);
     }
+    saveToProject();
     setDrawing(false);
+    
   };
 
   const handleDragEnd = async (e, index) => {
@@ -258,6 +258,7 @@ const ImageAnnotation = ({ imageURL, rects: initialRects, onRectsChange, saveCRN
       return r;
     });
     setRects(updatedRects);
+    saveToProject()
   };
 
   const handleMouseMove = (e) => {

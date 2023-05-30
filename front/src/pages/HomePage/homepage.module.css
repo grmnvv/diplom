@@ -1,0 +1,36 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    background-color: #1e1e1e;
+    color: #fff;
+    text-align: center;
+    font-family: "Source Code Pro";
+  }
+.logo{
+    font-size: 48px;
+    margin: 50px 0 5px 0;
+}  
+
+.underlogo{
+    width: 400px;
+    font-size: 16px;
+    margin: 0 0 20px 0;
+}
+
+.image{
+    margin: 50px 0 0 0;
+    max-width: 100%;
+}
+
+img{
+    width: 55%;
+    height: auto;
+}
+
+.main{
+    width: 100vw;
+}

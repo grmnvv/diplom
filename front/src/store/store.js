@@ -124,7 +124,7 @@ export default class Store {
     try {
       const response = await AuthService.registration(email, password, login);
       localStorage.setItem("token", response.data.accessToken);
-      this.setRegister(true);
+      this.setAuth(true);
       this.setUser(response.data.user);
     } catch (e) {
       this.setError(e.response?.data?.message);
@@ -148,9 +148,25 @@ export default class Store {
       console.error(e.response?.data?.message);
     }
   }
+
+  async refresh() {
+    try {
+      this.setLoading(true)
+      const response = await AuthService.refresh();
+      this.setAuth(true);
+      this.setUser(response.data.user);
+      console.log(this.user)
+    } catch (e) {
+      console.error(e.response?.data?.message);
+    }finally{
+      this.setLoading(false)
+    }
+  }
   async deleteProject(id) {
     try {
+      console.log(id)
       await AuthService.deleteProject(id);
+
     } catch (e) {
       console.error(e.response?.data?.message);
     }
@@ -184,6 +200,7 @@ export default class Store {
     try {
       this.setAllProject([])
       this.setLoading(true)
+      console.log('1234324234')
       const response = await AuthService.getProject();
       const projects = await Promise.all(
         response.data.map(async (project) => {
@@ -202,6 +219,7 @@ export default class Store {
         })
       );
       projects.forEach((project) => this.pushProject(project));
+      console.log(projects)
       this.setProject(this.allProjects[0]);
     } catch (e) {
       console.log(e.response?.data?.message);
@@ -220,6 +238,7 @@ export default class Store {
           return rest;
         }),
       };
+      console.log(projectWithoutURLs)
       const response = await AuthService.saveProject(projectWithoutURLs);
     } catch (e) {
       console.log(e.response?.data?.message);

@@ -1,14 +1,18 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { Context } from '../..';
 import styles from './NewProject.module.css';
 import { v4 as uuidv4 } from 'uuid';
+import { useNavigate } from 'react-router-dom';
+import Header from '../../components/Header/Header';
 
 const NewProject = () => {
   const { store } = useContext(Context);
   const [projectName, setProjectName] = useState('');
   const [imagesData, setImagesData] = useState([]);
   const [dragging, setDragging] = useState(false);
-
+  const [error, setError] = useState('');
+  const [name, setName] = useState(false)
+  const navigate = useNavigate()
   const handleProjectNameChange = (e) => {
     setProjectName(e.target.value);
   };
@@ -17,30 +21,36 @@ const NewProject = () => {
     handleFiles(e.target.files);
   };
 
-  const dataURLtoBlob = (dataURL) => {
-    const binary = atob(dataURL.split(",")[1]);
-    const array = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) {
-      array[i] = binary.charCodeAt(i);
-    }
-    return new Blob([array], { type: "image/jpeg" });
-  };
+  useEffect(() => {
+    store.refresh()
+  }, []);
+
 
   const handleFiles = (files) => {
     if (files) {
-      const newImagesData = Array.from(files).map((file) => ({
-        file,
-        url: URL.createObjectURL(file),
-        rects: [],
-        name: file.name,
-      }));
-  
+      const newImagesData = [];
+      for (const file of Array.from(files)) {
+        if (!file.type.startsWith('image/')) {
+          setError(`# файл '${file.name}' не изображение`);
+          return;
+        }
+        newImagesData.push({
+          file,
+          url: URL.createObjectURL(file),
+          rects: [],
+          name: file.name,
+        });
+      }
+      setError('');  // Clear any existing error message
       setImagesData((prevImagesData) => [...prevImagesData, ...newImagesData]);
     }
   };
+  
 
   const handleSubmit = async () => {
-    const projectNew = {
+    
+    if (projectName !== '')
+    {const projectNew = {
       projectName,
       imagesData,
       id: uuidv4(),
@@ -54,6 +64,12 @@ const NewProject = () => {
       formData.append(`rects[${index}]`, JSON.stringify(imageData.rects));
     });
     store.createProject(formData)
+    navigate('/projects')
+  }else {
+
+        setName(true)
+    } 
+    
   };
   
   const handleDragOver = (e) => {
@@ -78,11 +94,11 @@ const NewProject = () => {
 
   return (
     <div className={styles.center}>
+            <Header login={store.user.login}/>
       <div className={styles.centered}>
-        <p className={styles.loginLabel}> <span style={{color:'#C586C0'}}>import</span> fastannot <span style={{color:'#C586C0'}}>as</span> fa</p>
         <p className={styles.label}>#объявите название проекта</p>
-        <label>projectName = </label>
-        <input type="text" value={projectName} onChange={handleProjectNameChange} className={styles.input} />
+        <label style={name ? {color:'#a70000'} : {}}>projectName = </label>
+        <input type="text" value={projectName} onChange={handleProjectNameChange} className={styles.input}  />
         <div
           className={`${styles.dropzone} ${dragging ? styles.dragging : ''}`}
           onDragOver={handleDragOver}
@@ -92,7 +108,7 @@ const NewProject = () => {
         >
           <p>{imagesData.length ? `${imagesData.length} файл(ов)` : 'Перетащите файлы сюда или '}</p>
           <label htmlFor="file-input" className={styles.button}>
-            Добавить файлы
+            fa.addFiles()
           </label>
           <input
             type="file"
@@ -102,6 +118,7 @@ const NewProject = () => {
             style={{ display: 'none' }}
           />
         </div>
+        {error && <p className={styles.error}>{error}</p>}
         <p className={styles.label} style={{margin: '100px 0 5px 0'}}>#нажмите на функцию, чтобы создать проект</p>
         <button onClick={handleSubmit} className={styles.button}>
           fa.createProject(projectName, files)

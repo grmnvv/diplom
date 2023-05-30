@@ -71,3 +71,9 @@
 .dragging {
   border-color: #6f6b4e;
 }
+
+.error{
+  font-size: 16px;
+  color: #a70000;
+  margin: 20px 0 0 0;
+}

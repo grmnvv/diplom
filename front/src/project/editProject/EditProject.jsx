@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import styles from "./EditProject.module.css";
 
 import { Context } from "../..";
+import Header from "../../components/Header/Header";
 
 const EditProject = () => {
   const { store } = useContext(Context);
@@ -31,6 +32,11 @@ const EditProject = () => {
   useEffect(() => {
     console.log(project);
   }, [project]);
+
+  useEffect(() => {
+    store.refresh()
+  }, []);
+
 
   const handleImageDelete = (imageIndex) => {
     const newImagesData = project.imagesData.filter(
@@ -72,8 +78,8 @@ const EditProject = () => {
 
   return (
     <div className={styles.center}>
+      <Header login={store.user.login}/>
       <div className={styles.centered}>
-        <p className={styles.loginLabel}><span style={{color:'#C586C0'}}>import</span> fastannot <span style={{color:'#C586C0'}}>as</span> fa</p>
         <p className={styles.label}>#объявите название проекта</p>
         <label>projectName = </label>
         <input

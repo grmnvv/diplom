@@ -9,8 +9,30 @@ import ApiError from "../middleware/apiError.js";
 import emailService from "./emailService.js";
 import jwt from "jsonwebtoken";
 import { projectModel } from "../models/projectModel.js";
+import AES from "crypto-js/aes.js";
+import Utf8 from "crypto-js/enc-utf8.js";
 
 class UserService {
+  secretKey = process.env.SECRET_KEY;
+
+  encryptData(data) {
+    const ciphertext = AES.encrypt(JSON.stringify(data), this.secretKey);
+    return ciphertext.toString();
+  }
+
+  decryptData(ciphertext) {
+    try {
+      const bytes = AES.decrypt(ciphertext, this.secretKey);
+      const decryptedData = JSON.parse(bytes.toString(Utf8));
+      return decryptedData;
+    } catch (e) {
+      console.log(ciphertext)
+    }
+
+
+   
+  }
+
   async registration(email, password, login) {
     const candidate = await UserModel.findOne({ email });
     if (candidate) {
@@ -107,7 +129,6 @@ class UserService {
   }
 
   async sendcode(email, code) {
-
     const user =
       (await UserModel.findOne({ login: email })) ||
       (await UserModel.findOne({ email }));
@@ -145,24 +166,24 @@ class UserService {
     }
   }
   async createProject(projectName, isHelper, refresh, imagesData, id) {
-    const proj = await projectModel.findOne({name: projectName})
-    if (proj){
-      throw ApiError.BadRequest('Такой проект уже существует')
+    const proj = await projectModel.findOne({ name: projectName });
+    if (proj) {
+      throw ApiError.BadRequest("Такой проект уже существует");
     }
-    console.log(refresh)
+    console.log(refresh);
     // Вам нужно получить userId, если он не доступен здесь
-    const user = tokenService.validateRefreshToken(refresh)
+    const user = tokenService.validateRefreshToken(refresh);
 
-    console.log(user)
+    console.log(user);
     const newProjectData = {
       user: user.id,
       id: id,
-      name: projectName,
+      name: this.encryptData(projectName),
       isHelper: isHelper,
       imageData: imagesData.map((imageData) => ({
         id: uuidv4(),
-        name: imageData.name,
-        url: imageData.url, // сохраняем url
+        name: this.encryptData(imageData.name),
+        url: this.encryptData(imageData.url), // сохраняем url
         rects: imageData.rects,
       })),
     };
@@ -171,42 +192,73 @@ class UserService {
     console.log(project);
   }
   async getProjects(refreshToken) {
-    const user = tokenService.validateRefreshToken(refreshToken)
-    const projects = await projectModel.find({ user: user.id });
-    return projects;
+    try {
+      const user = tokenService.validateRefreshToken(refreshToken);
+      let projects = await projectModel.find({ user: user.id }).lean();
+      console.log(projects);
+      projects = projects.map((project) => {
+        return {
+          ...project,
+          name: this.decryptData(project.name),
+          imageData: project.imageData.map((imageData) => {
+            return {
+              ...imageData,
+              name: this.decryptData(imageData.name),
+              url: this.decryptData(imageData.url),
+            };
+          }),
+        };
+      });
+      console.log(projects);
+      return projects;
+    } catch (e) {
+      console.log(e);
+    }
   }
 
   async saveProject(project, refreshToken) {
     try {
-        const user = tokenService.validateRefreshToken(refreshToken)
-
-        let proj = await projectModel.findOne({ id: project.id, user: user.id });
-        if (proj) {
-            const currentUrls = proj.imageData.map((image) => image.url);
-            Object.assign(proj, project);
-            proj.imageData.forEach((image, index) => {
-                image.url = currentUrls[index];
-            });
-
-            let updatedProj = await projectModel.findOneAndUpdate(
-                { id: proj.id, user: user.id },  
-                proj, 
-                { new: true }  
-            );
-
-            console.log(updatedProj);
-        }
+      const user = tokenService.validateRefreshToken(refreshToken);
+  
+      let proj = await projectModel.findOne({ id: project.id, user: user.id });
+      if (proj) {
+        const currentUrls = proj.imageData.map((image) => image.url);
+  
+        // Encrypt project name
+        project.name = this.encryptData(project.name);
+  
+        // Encrypt image data
+        project.imageData.forEach((image) => {
+          image.name = this.encryptData(image.name);
+          image.url = this.encryptData(image.url);
+        });
+  
+        Object.assign(proj, project);
+  
+        proj.imageData.forEach((image, index) => {
+          image.url = currentUrls[index];
+        });
+  
+        let updatedProj = await projectModel.findOneAndUpdate(
+          { id: proj.id, user: user.id },
+          proj,
+          { new: true }
+        );
+  
+        console.log(updatedProj);
+      }
     } catch (error) {
-        console.log(error);
+      console.log(error);
     }
-}
-
+  }
+  
+  
 
   async deleteProject(refreshToken, id) {
     try {
-      const user = tokenService.validateRefreshToken(refreshToken)
+      const user = tokenService.validateRefreshToken(refreshToken);
       let proj = await projectModel.findOneAndDelete({ id: id, user: user.id });
-      return proj
+      return proj;
     } catch (error) {
       console.log(error);
     }

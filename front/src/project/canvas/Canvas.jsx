@@ -6,6 +6,7 @@ import { saveAs } from "file-saver";
 import styles from "./Canvas.module.css";
 import { observer } from "mobx-react-lite";
 import { useParams } from "react-router-dom";
+import Header from "../../components/Header/Header";
 
 const Thumbnail = ({ image, onClick, selected, index }) => {
   const thumbnailStyle = selected
@@ -22,6 +23,7 @@ const Thumbnail = ({ image, onClick, selected, index }) => {
           margin: "0 0 10px 0",
           display: "inline-block",
           width: "100%",
+          textOverflow: 'ellipsis'
         }}
       >
         fa[{index}].name = {image.name}
@@ -49,6 +51,7 @@ const Canvas = () => {
     setThumbnailsCollapsed(!thumbnailsCollapsed);
   };
   useEffect(() => {
+    store.refresh();
     store.getProject();
     store.selectProject(id);
   }, []);
@@ -61,7 +64,7 @@ const Canvas = () => {
         console.log(store.Project);
       }
     }
-  }, [store.Project, store.isLoading]);
+  }, [store.Project]);
 
   const handleImageClick = (index) => {
     setSelectedImageIndex(index);
@@ -238,8 +241,8 @@ const Canvas = () => {
 
   return (
     <div className={styles.center}>
+      <Header login={store.user.login}/>
       <div className={styles.workspace}>
-        {/* Показываем или прячем миниатюры в зависимости от состояния thumbnailsCollapsed */}
         {!thumbnailsCollapsed && (
           <div className={styles.thumbnail}>
             {imagesData.map((imageData, index) => (
@@ -255,14 +258,12 @@ const Canvas = () => {
             ))}
           </div>
         )}
-        {/* Добавляем кнопку для сворачивания миниатюр */}
         <button
           onClick={handleCollapseClick}
           style={{ position: "absolute", left: 0, top: "50%" }}
         >
           {thumbnailsCollapsed ? ">" : "<"}
         </button>
-        {/* Даем imageannotation области занимать все пространство, когда миниатюры свернуты */}
         <div
           className={
             thumbnailsCollapsed
@@ -279,6 +280,7 @@ const Canvas = () => {
               saveCRNN={saveCroppedImages}
               saveYOLO={saveYOLOformat}
               thumbnailsCollapsed={thumbnailsCollapsed}
+              saveToProject={saveToProject}
             />
           )}
         </div>

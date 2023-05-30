@@ -12,6 +12,10 @@ const LoginPage = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    store.refresh()
+}, []); 
+
+  useEffect(() => {
     if(store.isAuth){
         navigate('/projects');
       }
