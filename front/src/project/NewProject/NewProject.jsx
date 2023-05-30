@@ -7,7 +7,6 @@ const NewProject = () => {
   const { store } = useContext(Context);
   const [projectName, setProjectName] = useState('');
   const [imagesData, setImagesData] = useState([]);
-  const [isHelper, setIsHelper] = useState(false);
   const [dragging, setDragging] = useState(false);
 
   const handleProjectNameChange = (e) => {
@@ -17,6 +16,7 @@ const NewProject = () => {
   const handleFileChange = (e) => {
     handleFiles(e.target.files);
   };
+
   const dataURLtoBlob = (dataURL) => {
     const binary = atob(dataURL.split(",")[1]);
     const array = new Uint8Array(binary.length);
@@ -25,10 +25,11 @@ const NewProject = () => {
     }
     return new Blob([array], { type: "image/jpeg" });
   };
+
   const handleFiles = (files) => {
     if (files) {
       const newImagesData = Array.from(files).map((file) => ({
-        file, // Добавьте эту строку
+        file,
         url: URL.createObjectURL(file),
         rects: [],
         name: file.name,
@@ -37,35 +38,24 @@ const NewProject = () => {
       setImagesData((prevImagesData) => [...prevImagesData, ...newImagesData]);
     }
   };
-  
-
-  const handleIsHelperChange = () => {
-    setIsHelper(!isHelper);
-  };
 
   const handleSubmit = async () => {
     const projectNew = {
       projectName,
       imagesData,
-      isHelper,
       id: uuidv4(),
     };
   
     const formData = new FormData();
     formData.append('projectName', projectNew.projectName);
-    formData.append('isHelper', projectNew.isHelper);
     formData.append('id', projectNew.id);
     projectNew.imagesData.forEach((imageData, index) => {
       formData.append(`images`, imageData.file, imageData.name);
       formData.append(`rects[${index}]`, JSON.stringify(imageData.rects));
     });
     store.createProject(formData)
-
-
   };
   
-  
-
   const handleDragOver = (e) => {
     e.preventDefault();
   };
@@ -87,38 +77,36 @@ const NewProject = () => {
   };
 
   return (
-    <div>
-      <div>
-        <p>Название проекта</p>
-        <input type="text" value={projectName} onChange={handleProjectNameChange} />
+    <div className={styles.center}>
+      <div className={styles.centered}>
+        <p className={styles.loginLabel}> <span style={{color:'#C586C0'}}>import</span> fastannot <span style={{color:'#C586C0'}}>as</span> fa</p>
+        <p className={styles.label}>#объявите название проекта</p>
+        <label>projectName = </label>
+        <input type="text" value={projectName} onChange={handleProjectNameChange} className={styles.input} />
+        <div
+          className={`${styles.dropzone} ${dragging ? styles.dragging : ''}`}
+          onDragOver={handleDragOver}
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          <p>{imagesData.length ? `${imagesData.length} файл(ов)` : 'Перетащите файлы сюда или '}</p>
+          <label htmlFor="file-input" className={styles.button}>
+            Добавить файлы
+          </label>
+          <input
+            type="file"
+            id="file-input"
+            onChange={handleFileChange}
+            multiple
+            style={{ display: 'none' }}
+          />
+        </div>
+        <p className={styles.label} style={{margin: '100px 0 5px 0'}}>#нажмите на функцию, чтобы создать проект</p>
+        <button onClick={handleSubmit} className={styles.button}>
+          fa.createProject(projectName, files)
+        </button>
       </div>
-      <div
-        className={`${styles.dropzone} ${dragging ? styles.dragging : ''}`}
-        onDragOver={handleDragOver}
-        onDragEnter={handleDragEnter}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-      >
-        <p>{imagesData.length ? `${imagesData.length} файл(ов)` : 'Перетащите файлы сюда'}</p>
-      </div>
-      <div>
-        <label htmlFor="file-input" className="file-upload-button">
-          Выберите файлы
-        </label>
-        <input
-          type="file"
-          id="file-input"
-          name=""
-          onChange={handleFileChange}
-          multiple
-          style={{ display: 'none' }}
-        />
-      </div>
-      <div>
-        <p>Использовать помощник</p>
-        <input type="checkbox" checked={isHelper} onChange={handleIsHelperChange} />
-      </div>
-      <button onClick={handleSubmit}>Создать проект</button>
     </div>
   );
 };

@@ -17,9 +17,11 @@ const projectModel = model("Projects", new Schema({
       height: { type: Number, required: true },
       id: { type: String, required: true },
       color: { type: String, required: true },
-      name: { type: String }
+      name: { type: String },
+      label: {type: String }
     }]
   }]
 }));
 
 export { projectModel };
+

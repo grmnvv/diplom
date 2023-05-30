@@ -53,7 +53,7 @@ class UserService {
       (await UserModel.findOne({ email }));
     if (!user) {
       throw ApiError.BadRequest(
-        `Пользователя с таким login/email не существует`
+        `пользователя с таким login/email не существует`
       );
     }
     const salt = uuidv4();
@@ -107,7 +107,6 @@ class UserService {
   }
 
   async sendcode(email, code) {
-    //тут мы генерируем ссылку
 
     const user =
       (await UserModel.findOne({ login: email })) ||
@@ -128,7 +127,6 @@ class UserService {
   }
 
   async changePassword(email, password, salt) {
-    //тут мы проверяем валидность и перезаписываем пароль
     const user =
       (await UserModel.findOne({ login: email })) ||
       (await UserModel.findOne({ email }));
@@ -191,9 +189,9 @@ class UserService {
             });
 
             let updatedProj = await projectModel.findOneAndUpdate(
-                { id: proj.id, user: user.id },  // условия поиска
-                proj,  // обновляемые данные
-                { new: true }  // возвращает обновленный документ
+                { id: proj.id, user: user.id },  
+                proj, 
+                { new: true }  
             );
 
             console.log(updatedProj);

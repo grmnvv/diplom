@@ -1,32 +1,85 @@
-.projectsContainer {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-start;
-    padding: 100px 30px;
-  }
-  
-  .projectCard {
-    width: 250px;
-    height: 150px;
-    background-color: #f2f2f2;
-    margin: 0 30px 100px 0;
-    border-radius: 15px;
-    padding: 15px;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-  }
-  
-  .newProjectCard {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-  }
-  p{
-    margin: 5px 0;
-  }
-  h2{
-    margin: 5px 0;
-  }
+.center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  width: 100vw;
+  background-color: #1e1e1e;
+  color: #fff;
+  font-size: 18px;
+  text-align: center;
+}
+
+.centered {
+  width: 70%;
+}
+
+.loginLabel {
+  margin: 0 0 100px 0;
+}
+
+.label {
+  font-size: 16px;
+  margin: 15px 0 8px 0;
+  color: #6d6d6d;
+}
+
+.input {
+  width: 100%;
+  background: none;
+  border: none;
+  border-bottom: 1px dashed white;
+  padding: 8px 0;
+  outline: none;
+  margin: 0 0 0;
+  width: 50%;
+  caret-color: #fff;
+  color: #fff;
+  font-size: 16px;
+  font-family: 'Source Code Pro';
+}
+
+.button {
+  padding: 4px 8px;
+  background-color: #000;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  background: #6f6b4e;
+  border-radius: 5px;
+  font-size: 16px;
+  font-family: "Source Code Pro";
+}
+
+.buttons {
+  display: flex;
+  justify-content: space-between;
+  width: 90%;
+  margin: 0 5%;
+  align-items: center;
+}
+
+.child{
+  width: 30%;
+}
+
+.projectCard {
+  background: #282828;
+  padding: 20px;
+  margin: 20px 0;
+  border-radius: 10px;
+}
+
+.projectInfo {
+  margin-bottom: 20px;
+  color: #fff;
+  font-size: 16px;
+  font-family: "Source Code Pro";
+}
+
+.error{
+  font-size: 16px;
+  color: #a70000;
+  margin: 20px 0 0 0;
+}

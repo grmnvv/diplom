@@ -18,15 +18,12 @@ const EditProject = () => {
 
   useEffect(() => {
     const projectToEdit = store.allProjects.find((proj) => proj.id === id);
-    console.log(projectToEdit);
     if (projectToEdit) {
       setProject({
         projectName: projectToEdit.name,
         imagesData: projectToEdit.imageData,
       });
-      console.log(project);
     } else {
-      // Например, перенаправить пользователя обратно к списку проектов
       navigate("/projects");
     }
   }, [id, store]);
@@ -74,51 +71,40 @@ const EditProject = () => {
   };
 
   return (
-    <div className={styles.container}>
-      <div className={styles.textEditing}>Редактирование проекта</div>
-      <div className={styles.changeName}>
-        <div className={styles.changeNameText}>Название проекта:</div>
-        <div className={styles.input}>
-          <input
-            type="text"
-            value={project.projectName}
-            onChange={(e) => setProject({ projectName: e.target.value })}
-          />
-        </div>
-      </div>
-      <div className={styles.imagesName}>Изображения</div>
-      <div className={styles.images}>
-        <div>
-          <div className={styles.uploadImages}>
-            <label htmlFor="file-input" className="file-upload-button">
-              Добавить изображения
-            </label>
-            <input
-              type="file"
-              id="file-input"
-              name=""
-              onChange={handleFileChange}
-              multiple
-              style={{ display: "none" }}
-            />
-          </div>
-        </div>
-        {project.imagesData &&
-          project.imagesData.map((imageData, index) => (
-            <div key={index}>
-              <img src={imageData.url} alt="project-thumbnail" />
-              <div className={styles.underImage}>
-                <div>fileName: {imageData.name}</div>
-                <button onClick={() => handleImageDelete(index)}>
-                  Удалить изображение
-                </button>
-              </div>
+    <div className={styles.center}>
+      <div className={styles.centered}>
+        <p className={styles.loginLabel}><span style={{color:'#C586C0'}}>import</span> fastannot <span style={{color:'#C586C0'}}>as</span> fa</p>
+        <p className={styles.label}>#объявите название проекта</p>
+        <label>projectName = </label>
+        <input
+          type="text"
+          value={project.projectName}
+          onChange={(e) => setProject({...project, projectName: e.target.value})}
+          className={styles.input}
+        />
+        <p className={styles.label}>#добавьте изображения</p>
+        <label htmlFor="file-input" className={styles.button}>fa.addImages()</label>
+        <input
+          type="file"
+          id="file-input"
+          onChange={handleFileChange}
+          multiple
+          style={{ display: "none" }}
+        />
+        <div className={styles.imagesContainer}>
+          {project.imagesData.map((imageData, index) => (
+            <div key={index} className={styles.child}>
+              <img src={imageData.url} alt="project-thumbnail" className={styles.image}/>
+              <button onClick={() => handleImageDelete(index)} className={styles.button}>
+                fa.deleteImage()
+              </button>
             </div>
           ))}
-      </div>
-
-      <div className={styles.submitButton}>
-        <button onClick={handleSubmit}>Сохранить изменения</button>
+        </div>
+        <p className={styles.label} style={{margin: '50px 0 5px 0'}}>#нажмите на функцию, чтобы сохранить изменения</p>
+        <button onClick={handleSubmit} className={styles.button} style={{margin:'0 0 100px 0'}}>
+          fa.saveChanges()
+        </button>
       </div>
     </div>
   );

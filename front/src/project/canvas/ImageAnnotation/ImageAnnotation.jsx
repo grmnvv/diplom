@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Stage, Layer, Image, Rect, Circle } from "react-konva";
+import { Stage, Layer, Image } from "react-konva";
 import useImage from "use-image";
 import { v4 as uuidv4 } from "uuid";
 import JSZip from "jszip";
@@ -8,6 +8,7 @@ import axios from "axios";
 import BoundingBox from "./BoundingBox/BoundingBox";
 import CroppedImage from "./CroppedImage/CroppedImage";
 import styles from "./ImageAnnotation.module.css";
+import { observer } from "mobx-react-lite";
 
 const MIN_RECT_SIZE = 10;
 
@@ -15,12 +16,7 @@ const randomColor = () => {
   return "#" + Math.floor(Math.random() * 16777215).toString(16);
 };
 
-const ImageAnnotation = ({
-  imageURL,
-  rects: initialRects,
-  onRectsChange,
-  saveAllCroppedImages,
-}) => {
+const ImageAnnotation = ({ imageURL, rects: initialRects, onRectsChange, saveCRNN, saveYOLO,thumbnailsCollapsed }) => {
   const [image] = useImage(imageURL);
   const [rects, setRects] = useState(initialRects);
   const [drawing, setDrawing] = useState(false);
@@ -29,8 +25,21 @@ const ImageAnnotation = ({
   const rectsRef = useRef(rects);
   const [scale, setScale] = useState(1);
   const [stagePosition, setStagePosition] = useState({ x: 0, y: 0 });
-  const stageRef = useRef(null);
-  
+
+  const divRef = useRef(null);
+  const [dimensions, setDimensions] = useState({
+    width: 0,
+    height: 0,
+  });
+
+  useEffect(() => {
+    if (divRef.current?.offsetHeight && divRef.current?.offsetWidth) {
+      setDimensions({
+        width: divRef.current.offsetWidth,
+        height: divRef.current.offsetHeight,
+      });
+    }
+  }, [window.innerWidth, thumbnailsCollapsed]);
 
   useEffect(() => {
     const handleRightClick = (e) => {
@@ -44,18 +53,15 @@ const ImageAnnotation = ({
     };
   }, []);
 
-
-
-
-const handleStageDragStart = (e) => {
+  const handleStageDragStart = (e) => {
     const stage = e.target.getStage();
     setStagePosition({ x: stage.x(), y: stage.y() });
-};
+  };
 
-const handleStageDragMove = (e) => {
+  const handleStageDragMove = (e) => {
     const stage = e.target.getStage();
     setStagePosition({ x: stage.x(), y: stage.y() });
-};
+  };
 
   useEffect(() => {
     setRects(initialRects);
@@ -83,7 +89,7 @@ const handleStageDragMove = (e) => {
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if ((e.key === "Backspace" || e.key === "Delete") && selectedRectId) {
+      if (e.key === "Backspace" && selectedRectId) {
         setRects(rects.filter((rect) => rect.id !== selectedRectId));
         setSelectedRectId(null);
       }
@@ -95,6 +101,12 @@ const handleStageDragMove = (e) => {
     };
   }, [rects, selectedRectId]);
 
+  function handleDelete(selectedRectId){
+    setRects(rects.filter((rect) => rect.id !== selectedRectId));
+  }
+  function handleSelect(selectedRectId){
+    setSelectedRectId(selectedRectId)
+  }
   const dataURLtoBlob = (dataURL) => {
     const binary = atob(dataURL.split(",")[1]);
     const array = new Uint8Array(binary.length);
@@ -147,18 +159,48 @@ const handleStageDragMove = (e) => {
       setDrawing(true);
       const pos = e.target.getStage().getPointerPosition();
       setCurrentRect({
-        x: (pos.x - stagePosition.x) / scale ,
+        x: (pos.x - stagePosition.x) / scale,
         y: (pos.y - stagePosition.y) / scale,
         width: 0,
         height: 0,
         id: uuidv4(),
         color: randomColor(),
         name: "",
+        label: ""
       });
     }
   };
-  
 
+  const handleWheel = (e) => {
+    e.evt.preventDefault();
+    const scaleBy = 1.036;
+    const oldScale = scale;
+    const stage = e.target.getStage();
+    var pointer = stage.getPointerPosition();
+
+    const pointerPosition = {
+      x: (pointer.x - stagePosition.x) / oldScale,
+      y: (pointer.y - stagePosition.y) / oldScale,
+    };
+
+    if (!e.evt.ctrlKey) {
+        const newX = stagePosition.x - (e.evt.deltaX * 0.4);
+        const newY = stagePosition.y - (e.evt.deltaY * 0.4);
+        setStagePosition({ x: newX, y: newY });
+      
+      return;
+    }
+    let direction = e.evt.deltaY > 0 ? -1 : 1;
+    const newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy;
+    setScale(newScale);
+
+    const newPos = {
+      x: pointer.x - pointerPosition.x * newScale,
+      y: pointer.y - pointerPosition.y * newScale,
+    };
+
+    setStagePosition(newPos);
+  };
 
   const handleMouseUp = async (e) => {
     if (e.evt.button === 2) {
@@ -223,8 +265,8 @@ const handleStageDragMove = (e) => {
     const pos = e.target.getStage().getPointerPosition();
     setCurrentRect({
       ...currentRect,
-      width: ((pos.x - stagePosition.x) - currentRect.x * scale) / scale,
-      height: ((pos.y - stagePosition.y) - currentRect.y * scale) / scale,
+      width: (pos.x - stagePosition.x - currentRect.x * scale) / scale,
+      height: (pos.y - stagePosition.y - currentRect.y * scale) / scale,
     });
   };
 
@@ -283,7 +325,9 @@ const handleStageDragMove = (e) => {
 
     if (anchorIndex === 0 || anchorIndex === 2) {
       newX = (pos.x - stagePosition.x) / scale;
-      newWidth = rects[index].width - ((pos.x - stagePosition.x) / scale - rects[index].x);
+      newWidth =
+        rects[index].width -
+        ((pos.x - stagePosition.x) / scale - rects[index].x);
     } else {
       newX = rects[index].x;
       newWidth = (pos.x - stagePosition.x) / scale - rects[index].x;
@@ -291,7 +335,9 @@ const handleStageDragMove = (e) => {
 
     if (anchorIndex === 0 || anchorIndex === 1) {
       newY = (pos.y - stagePosition.y) / scale;
-      newHeight = rects[index].height - ((pos.y - stagePosition.y) / scale - rects[index].y);
+      newHeight =
+        rects[index].height -
+        ((pos.y - stagePosition.y) / scale - rects[index].y);
     } else {
       newY = rects[index].y;
       newHeight = (pos.y - stagePosition.y) / scale - rects[index].y;
@@ -320,60 +366,40 @@ const handleStageDragMove = (e) => {
     });
     setRects(updatedRects);
   };
-
-  const saveCroppedImages = async () => {
-    const zip = new JSZip();
-    const folder = zip.folder("cropped_images");
-    for (const rect of rects) {
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
-      canvas.width = rect.width;
-      canvas.height = rect.height;
-      ctx.drawImage(
-        image,
-        rect.x / scale,
-        rect.y / scale,
-        rect.width / scale,
-        rect.height / scale,
-        0,
-        0,
-        rect.width,
-        rect.height
-      );
-
-      const blob = await new Promise((resolve) =>
-        canvas.toBlob(resolve, "image/jpeg")
-      );
-      const filename = rect.name || `image_${rect.id}`;
-      folder.file(`${filename}.jpeg`, blob);
-    }
-
-    zip
-      .generateAsync({ type: "blob" })
-      .then((content) => saveAs(content, "cropped_images.zip"));
+  const handleLabelChange = (rect, label) => {
+    const updatedRects = rects.map((r) => {
+      if (r.id === rect.id) {
+        return {
+          ...r,
+          label: label,
+        };
+      }
+      return r;
+    });
+    setRects(updatedRects);
   };
 
   return (
     <div className={styles.container}>
       <div className={styles.innerContainer}>
-        <div className={styles.stageWrapper}>
+        <div className={styles.stageWrapper} ref={divRef}>
           <Stage
-              x={stagePosition.x} 
-              y={stagePosition.y} 
-              width={image ? image.width : 0} 
-              height={image ? image.height : 0} 
-
-              onDragStart={handleStageDragStart} 
-              onDragMove={handleStageDragMove} 
-              onMouseDown={handleMouseDown} 
-              onMouseUp={handleMouseUp} 
-              onMouseMove={handleMouseMove}>
-
+            x={Math.floor(stagePosition.x)}
+            y={Math.floor(stagePosition.y)}
+            width={dimensions.width}
+            height={dimensions.height}
+            onDragStart={handleStageDragStart}
+            onDragMove={handleStageDragMove}
+            onMouseDown={handleMouseDown}
+            onMouseUp={handleMouseUp}
+            onMouseMove={handleMouseMove}
+            onWheel={handleWheel}
+          >
             <Layer>
               <Image
                 image={image}
-                width={image ? image.width  : 0}
-                height={image ? image.height  : 0}
+                width={image ? image.width : 0}
+                height={image ? image.height : 0}
                 scaleX={scale}
                 scaleY={scale}
               />
@@ -398,38 +424,28 @@ const handleStageDragMove = (e) => {
             </Layer>
           </Stage>
         </div>
-        <div className={styles.scaleInputWrapper}>
-          <input
-            type="range"
-            min="0.1"
-            max="2"
-            step="0.005"
-            value={scale}
-            onChange={handleScaleChange}
-            style={{ width: "200px" }}
-          />
-        </div>
       </div>
-      <div className={styles.sidebar}>
-        {rects.map((rect) => (
-          <CroppedImage
-            key={rect.id}
-            image={image}
-            rect={rect}
-            onFilenameChange={handleFilenameChange}
-          />
-        ))}
-        <div>
-          <button onClick={saveCroppedImages}>
-            Сохранить нарезанные изображения
-          </button>
+      <div className={styles.right}>
+        <div className={styles.sidebar}>
+          {rects.map((rect) => (
+            <div key={rect.id}>
+              <CroppedImage
+                key={rect.id}
+                image={image}
+                rect={rect}
+                onFilenameChange={handleFilenameChange}
+                handleDelete={handleDelete}
+                handleSelect={handleSelect}
+                onLabelChange={handleLabelChange}
+              />
+            </div>
+          ))}
         </div>
-        <div>
-          <button onClick={saveAllCroppedImages}>Сохранить</button>
-        </div>
+        <button onClick={saveCRNN}>fa.saveCRNN()</button>
+        <button onClick={saveYOLO}>fa.saveYOLO()</button>
       </div>
     </div>
   );
 };
 
-export default ImageAnnotation;
+export default observer(ImageAnnotation);

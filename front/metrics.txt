@@ -1,0 +1,3026 @@
+import UserService from "../service/userService.js";
+
+class UserController {
+  async registration(req, res, next) {
+    try {
+      const { email, password, login } = req.body;
+      const userData = await UserService.registration(email, password, login);
+      console.log(userData);
+      res.cookie("refreshToken", userData.refreshToken, {
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+        httpOnly: true,
+      });
+
+      return res.json(userData);
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
+  async login(req, res, next) {
+    try {
+      const { email, password } = req.body;
+      const userData = await UserService.login(email, password);
+      res.cookie("refreshToken", userData.refreshToken, {
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+        httpOnly: true,
+      });
+      return res.json(userData);
+    } catch (e) {
+      next(e);
+    }
+  }
+
+  async logout(req, res, next) {
+    try {
+      const { refreshToken } = req.cookies;
+      const token = await UserService.logout(refreshToken);
+      res.clearCookie("refreshToken");
+      return res.json(token);
+    } catch (e) {
+      next(e);
+    }
+  }
+
+  async activate(req, res, next) {
+    try {
+      const activationLink = req.params.link;
+      await UserService.activate(activationLink);
+      return res.redirect(process.env.CLIENT_URL);
+    } catch (e) {
+      next(e);
+    }
+  }
+
+  async refresh(req, res, next) {
+    try {
+      const { refreshToken } = req.cookies;
+      const userData = await UserService.refresh(refreshToken);
+      res.cookie("refreshToken", userData.refreshToken, {
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+        httpOnly: true,
+      });
+      return res.json(userData);
+    } catch (e) {
+      next(e);
+    }
+  }
+
+  async sendcode(req, res, next) {
+    try {
+      console.log("fds");
+      const { email, code } = req.body;
+      const userData = await UserService.sendcode(email, code);
+      return res.json(userData);
+    } catch (e) {
+      next(e);
+    }
+  }
+
+  async changePassword(req, res, next) {
+    try {
+      const { email, password, salt } = req.body;
+      const userData = await UserService.changePassword(email, password, salt);
+      return res.json(userData);
+    } catch (e) {
+      next(e);
+    }
+  }
+
+  async checklink(req, res, next) {
+    try {
+      const { token } = req.params;
+      const userData = await UserService.resetPassword(id, token, password);
+      return res.json(userData);
+    } catch (e) {
+      next(e);
+    }
+  }
+  async createProject(req, res, next) {
+    try {
+      const { projectName, isHelper, id } = req.body;
+      const { refreshToken } = req.cookies;
+      console.log(req)
+      const imagesData = req.files.map((file, index) => ({
+        url: file.path, // Используйте свойство 'path' для доступа к пути файла
+        rects: JSON.parse(req.body[`rects[${index}]`] || "[]"),
+        name: file.originalname,
+      }));
+      console.log(id);
+      // ... (Код создания проекта и сохранения данных)
+
+      const userData = await UserService.createProject(
+        projectName,
+        isHelper,
+        refreshToken,
+        imagesData, 
+        id
+      );
+      return res.json(userData);
+    } catch (e) {
+      console.log(e)
+    }
+  }
+
+  async getProjects(req, res, next) {
+    try {
+      const { refreshToken } = req.cookies;
+      const projects = await UserService.getProjects(refreshToken);
+      return res.json(projects);
+    } catch (e) {
+      next(e);
+    }
+  }
+  async saveProject(req, res, next){
+    try {
+        const {project} = req.body;
+        const { refreshToken } = req.cookies;
+        const response = await UserService.saveProject(project, refreshToken)
+    } catch (e) {
+      next(e);
+    }
+  }
+  async deleteProject(req, res, next){
+    try {
+        const {id} = req.params;
+        console.log(id)
+        const { refreshToken } = req.cookies;
+        const response = await UserService.deleteProject(refreshToken, id)
+        return res.json(response)
+    } catch (e) {
+      next(e);
+    }
+  }
+}
+
+
+export default new UserController();
+
+export default class UserDto{
+    email;
+    id;
+    login;
+    isActivated;
+    constructor(model){
+        this.email = model.email;
+        this.id = model._id;
+        this.isActivated = model.isActivated;
+        this.login = model.login;
+    }
+}
+export default class ApiError extends Error {
+    status;
+    errors;
+    constructor(status, message, errors = []){
+        super(message);
+        this.status = status;
+        this.errors = errors; 
+    }
+
+    static UnauthorizedError(){
+        return new ApiError(401, 'Пользователь не авторизован')
+    }
+
+    static BadRequest(message, errors){
+        return new ApiError(400, message, errors);
+    }
+}
+import ApiError from "./apiError.js";
+
+export default function (err, req, res, next){
+    if(err instanceof ApiError){
+        return res.status(err.status).json({message: err.message, errors: err.errors})
+    }
+    return res.status(500).json({message:'Непредвиденная ошибка'})
+}
+import { UserModel } from "../models/auth.model.js";
+import tokenService from "../services/tokenService.js";
+import ApiError from "./apiError.js";
+
+
+export default async function (req, res, next){
+    try {
+        const authorizationHeader = req.headers['authorization'];
+
+        if(!authorizationHeader){
+            return next(ApiError.UnauthorizedError()); 
+        }
+
+        const accessToken = authorizationHeader.split(' ')[1];
+        if(!accessToken){
+            return next(ApiError.UnauthorizedError());
+        }
+
+        const userData = tokenService.validateAccessToken(accessToken);
+
+        if(!userData){
+            return next(ApiError.UnauthorizedError());
+        }
+        req.user = userData;
+        next();
+    } catch (e) {
+        return next(ApiError.UnauthorizedError());
+    }
+}
+import mongoose from "mongoose";
+const { Schema, model } = mongoose;
+
+const projectModel = model("Projects", new Schema({
+  user: { type: Schema.Types.ObjectId, ref: 'User' },
+  id: { type: String, required: true },
+  name: { type: String, required: true },
+  isHelper: { type: Boolean, default: false },
+  imageData: [{
+    id: { type: String, required: true },
+    name: { type: String, required: true },
+    url: { type: String, required: true }, // Добавлено поле url
+    rects: [{
+      x: { type: Number, required: true },
+      y: { type: Number, required: true },
+      width: { type: Number, required: true },
+      height: { type: Number, required: true },
+      id: { type: String, required: true },
+      color: { type: String, required: true },
+      name: { type: String }
+    }]
+  }]
+}));
+
+export { projectModel };
+import mongoose from "mongoose";
+const { Schema, model } = mongoose;
+
+const tokenModel = model("Token", new Schema({
+    user: {type: Schema.Types.ObjectId, ref: 'User'},
+    refreshToken: {type: String, required: true},
+}))
+
+export { tokenModel };
+import mongoose from "mongoose";
+const { Schema, model } = mongoose;
+
+const UserModel = model("User", new Schema({
+    email: {type: String, unique: true, required: true},
+    password: {type: String, required: true},
+    login: {type: String},
+    isActivated: {type: Boolean, default:false},
+    salt: { type: String},
+}))
+
+export { UserModel };
+
+import random
+from PIL import Image
+import numpy as np
+import cv2
+from tensorflow.keras.layers import Dense, LSTM, BatchNormalization, Input, Conv2D, MaxPool2D, Lambda, Bidirectional
+from tensorflow.keras.models import Model
+import tensorflow.keras.backend as K
+
+char_list = 'АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ.-0123456789 "№'
+
+def TextPrediction(image, model):
+    
+    result = image_prep(image)
+    res = get_pred(np.expand_dims(result, axis=0), model)
+    return {'result': res}
+
+
+def TextModel(path):
+    #CRNN model
+    inputs = Input(shape=(64, 256, 1))
+
+    conv_1 = Conv2D(64, (3, 3), activation='relu', padding='same')(inputs)
+    pool_1 = MaxPool2D(pool_size=(2, 2), strides=2)(conv_1)
+
+    conv_2 = Conv2D(128, (3, 3), activation='relu', padding='same')(pool_1)
+    pool_2 = MaxPool2D(pool_size=(2, 2), strides=2)(conv_2)
+
+    conv_3 = Conv2D(128, (3, 3), activation='relu', padding='same')(pool_2)
+
+    conv_4 = Conv2D(128, (3, 3), activation='relu', padding='same')(conv_3)
+    pool_4 = MaxPool2D(pool_size=(2, 1))(conv_4)
+
+    conv_5 = Conv2D(256, (3, 3), activation='relu', padding='same')(pool_4)
+    batch_norm_5 = BatchNormalization()(conv_5)
+
+    conv_6 = Conv2D(512, (3, 3), activation='relu', padding='same')(batch_norm_5)
+    batch_norm_6 = BatchNormalization()(conv_6)
+
+    pool_6 = MaxPool2D(pool_size=(3, 1))(batch_norm_6)
+
+    conv_7 = Conv2D(1024, (2, 2), activation='relu')(pool_6)
+
+    squeezed = Lambda(lambda x: K.squeeze(x, 1))(conv_7)
+
+    blstm_1 = Bidirectional(LSTM(128, return_sequences=True, dropout=0.2))(squeezed)
+    blstm_2 = Bidirectional(LSTM(128, return_sequences=True, dropout=0.2))(blstm_1)
+
+    outputs = Dense(len(char_list) + 1, activation='softmax')(blstm_2)
+
+    # model to be used at test time
+    model = Model(inputs, outputs)
+
+    print(model.summary())
+    model.load_weights(path)
+
+    return model
+
+
+def encode_to_labels(txt):
+    dig_lst = []
+    for index, char in enumerate(txt):
+        try:
+            dig_lst.append(char_list.index(char))
+        except:
+            print(char)
+    return dig_lst
+
+
+def find_dominant_color(image):
+    width, height = 150, 150
+    image = image.resize((width, height), resample=0)
+    pixels = image.getcolors(width * height)
+    sorted_pixels = sorted(pixels, key=lambda t: t[0])
+    dominant_color = sorted_pixels[-1][1]
+    return dominant_color
+
+
+def preprocess_img(img, imgSize):
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    if img is None:
+        img = np.zeros([imgSize[1], imgSize[0]])
+        print("Image None!")
+    (wt, ht) = imgSize
+    (h, w) = img.shape
+    fx = w / wt
+    fy = h / ht
+    f = max(fx, fy)
+
+    newSize = (max(min(wt, int(w / f)), 1),
+               max(min(ht, int(h / f)), 1))
+    img = cv2.resize(img, newSize, interpolation=cv2.INTER_CUBIC)
+    most_freq_pixel = find_dominant_color(Image.fromarray(img))
+    target = np.ones([ht, wt]) * most_freq_pixel
+    target[0:newSize[1], 0:newSize[0]] = img
+    img = target
+
+    return img
+
+
+def image_prep(image):
+    image = preprocess_img(image, (256, 64))
+    image = np.expand_dims(image, axis=-1)
+    image = image / 255.
+    return image
+
+
+def get_pred(array, model):
+    output = ''
+    array = np.array(array)
+    prediction = model.predict(array)
+    out = K.get_value(
+        K.ctc_decode(prediction, input_length=np.ones(prediction.shape[0]) * prediction.shape[1], greedy=True)[0][0])
+    for x in out:
+        for p in x:
+            if int(p) != -1:
+                output += char_list[int(p)]
+    return output
+
+from fastapi import FastAPI, File
+
+import numpy as np
+import cv2
+from fastapi.middleware.cors import CORSMiddleware
+from model import *
+
+app = FastAPI()
+
+origins = [
+    'http://127.0.0.1',
+    'http://localhost',
+    'http://localhost:3000'
+    
+]
+model = TextModel('/Users/egorgarmanov/Machine Learning/CheckIn/WonePassportDocker/wonePassports/MINIMAL30.hdf5')
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.post("/word")
+async def read_passport(image: bytes = File(...)):
+
+    nparr = np.fromstring(image, np.uint8)
+    # decode image
+
+
+    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+
+    return TextPrediction(img, model)
+
+import { Router } from "express";
+import UserController from "../controllers/userController.js";
+import multer from "multer";
+const router = new Router();
+
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, '/Users/egorgarmanov/Desktop/he/'); // Устанавливаем директорию для сохранения файлов
+    },
+    filename: (req, file, cb) => {
+      cb(null, Date.now() + '-' + file.originalname); // Генерируем уникальное имя файла
+    },
+  });
+
+  const upload = multer({ storage }); 
+
+router.post('/registration', UserController.registration);
+router.post('/login', UserController.login);
+router.post('/logout', UserController.logout);
+router.post('/sendcode', UserController.sendcode)
+router.post('/changePassword', UserController.changePassword)
+router.post('/createProject', upload.array("images"), UserController.createProject)
+router.delete('/deleteProject/:id', UserController.deleteProject)
+router.post('/saveProject', UserController.saveProject)
+router.get('/activate/:link', UserController.activate)
+router.get('/refresh', UserController.refresh);
+router.get('/checklink', UserController.checklink);
+router.get('/getProjects', UserController.getProjects);
+
+
+export default router;
+
+import nodemailer from 'nodemailer';
+import dotenv from 'dotenv'
+import { UserModel } from '../models/userModel.js';
+dotenv.config()
+
+class mailService {
+    constructor(){
+        this.transporter = nodemailer.createTransport({
+            host: process.env.SMTP_HOST,
+            port: process.env.SMTP_PORT,
+            secure: true,
+            auth:{
+                user: process.env.SMTP_USER,
+                pass: process.env.SMTP_PASSWORD
+            }
+        })
+    }
+    async SendActivationMail(to, name, patronymic, link){
+        await this.transporter.sendMail({
+            from: process.env.SMTP_USER,
+            to,
+            subject: `Активация аккаунта FastAnnot`,
+            text: 'Подтверждение аккаунта',
+            html:
+                `
+                <div>
+                    <h1>Уважаемый/ая ${name} ${patronymic}, Вы зарегистрировались на сайте мединского центра MCenter.</h1>
+                    <h2>Чтобы активировать аккаунт, перейдите по ссылке:</h2>
+                    <a style="font-size: 30px" href="${link}">Активация аккаунта</a>
+                </div>
+                `
+        })
+    }
+    async SendForgot(email, code){
+        console.log(email)
+        try {
+            await this.transporter.sendMail({
+                from: process.env.SMTP_USER,
+                to: email,
+                subject: `Сброс пароля`,
+                text: 'Если вы не сбрасывали пароль, не реагируйте на это письмо',
+                html:
+                    `
+                    <div>
+                        <h1>ВАШ КОД: ${code}</h1>
+                        
+                    </div>
+                    `
+            })
+        } catch (e) {
+            console.log(e)
+        }
+        
+    }
+}
+
+
+export default new mailService();
+import jwt from 'jsonwebtoken'
+import { tokenModel } from '../models/tokenModel.js';
+class tokenService{
+    generateTokens(payload){
+        const accessToken = jwt.sign(payload, process.env.JWTAS, {expiresIn:'30d'});
+        const refreshToken = jwt.sign(payload, process.env.JWTRS, {expiresIn:'30d'});
+        return{
+            accessToken,
+            refreshToken
+        }
+    }
+
+    validateAccessToken(token){
+        try {
+            const userData = jwt.verify(token, process.env.JWTAS);
+            return userData; 
+        } catch (e) {
+            return null;
+        }
+    }
+    validateRefreshToken(token){
+        try {
+            const userData = jwt.verify(token, process.env.JWTRS);
+            return userData; 
+        } catch (e) {
+            return null;
+        }
+    }
+
+    async saveToken(userId, refreshToken){
+        const tokenData = await tokenModel.findOne({user:userId})
+        if(tokenData){
+            tokenData.refreshToken = refreshToken;
+            return tokenData.save();
+        }
+        const token = await tokenModel.create({user:userId, refreshToken})
+        return token;
+    }
+
+    async removeToken(refreshToken){
+        const tokenData = tokenModel.deleteOne({refreshToken});
+        return tokenData;
+    }
+
+    async findToken(refreshToken){
+        const tokenData = tokenModel.findOne({refreshToken});
+        return tokenData;
+    }
+}
+
+export default new tokenService;
+import bcrypt, { compareSync } from "bcrypt";
+import { UserModel } from "../models/userModel.js";
+import { tokenModel } from "../models/tokenModel.js";
+import { v4 as uuidv4 } from "uuid";
+import dotenv from "dotenv";
+import UserDto from "../dtos/userDto.js";
+import tokenService from "./tokenService.js";
+import ApiError from "../middleware/apiError.js";
+import emailService from "./emailService.js";
+import jwt from "jsonwebtoken";
+import { projectModel } from "../models/projectModel.js";
+
+class UserService {
+  async registration(email, password, login) {
+    const candidate = await UserModel.findOne({ email });
+    if (candidate) {
+      throw ApiError.BadRequest(
+        `Пользователь с почтовым адресом ${email} уже существует`
+      );
+    }
+    const candidate2 = await UserModel.findOne({ login });
+
+    if (candidate2) {
+      throw ApiError.BadRequest(
+        `Пользователь с логином ${login} уже существует`
+      );
+    }
+
+    const hashPassword = await bcrypt.hash(password, 3);
+    const salt = uuidv4();
+    const user = await UserModel.create({
+      email,
+      password: hashPassword,
+      login,
+      salt,
+    });
+
+    const userDto = new UserDto(user);
+
+    const tokens = tokenService.generateTokens({ ...userDto });
+
+    await tokenService.saveToken(userDto.id, tokens.refreshToken);
+    console.log("fds");
+    return {
+      ...tokens,
+      user: userDto,
+    };
+  }
+
+  async login(email, password) {
+    const user =
+      (await UserModel.findOne({ login: email })) ||
+      (await UserModel.findOne({ email }));
+    if (!user) {
+      throw ApiError.BadRequest(
+        `Пользователя с таким login/email не существует`
+      );
+    }
+    const salt = uuidv4();
+    user.salt = salt;
+    await user.save();
+    const isPassEqual = await bcrypt.compare(password, user.password);
+    if (!isPassEqual) {
+      throw ApiError.BadRequest("Неверный пароль");
+    }
+    const userDto = new UserDto(user);
+    const token = tokenService.generateTokens({ ...userDto });
+    await tokenService.saveToken(userDto.id, token.refreshToken);
+    return {
+      ...token,
+      user: userDto,
+    };
+  }
+
+  async activate(activationLink) {
+    const user = await UserModel.findOne({ activationLink });
+    if (!user) {
+      throw ApiError.BadRequest("Некорректная ссылка активации");
+    }
+    user.isActivated = true;
+    await user.save();
+  }
+
+  async logout(refreshToken) {
+    const token = await tokenService.removeToken(refreshToken);
+    return token;
+  }
+
+  async refresh(refreshToken) {
+    if (!refreshToken) {
+      throw ApiError.UnauthorizedError();
+    }
+    const userData = tokenService.validateRefreshToken(refreshToken);
+    const tokenFromDb = tokenService.findToken(refreshToken);
+    if (!userData || !tokenFromDb) {
+      throw ApiError.UnauthorizedError();
+    }
+
+    const user = await UserModel.findById(userData.id);
+    const userDto = new UserDto(user);
+    const token = tokenService.generateTokens({ ...userDto });
+    await tokenService.saveToken(userDto.id, token.refreshToken);
+    return {
+      ...token,
+      user: userDto,
+    };
+  }
+
+  async sendcode(email, code) {
+
+    const user =
+      (await UserModel.findOne({ login: email })) ||
+      (await UserModel.findOne({ email }));
+    const salt = uuidv4();
+    user.salt = salt;
+    await user.save();
+    console.log(salt);
+    if (!user) {
+      throw ApiError.BadRequest(
+        `Пользователя с таким login/email не существует`
+      );
+    }
+    await emailService.SendForgot(user.email, code);
+    return {
+      salt: salt,
+    };
+  }
+
+  async changePassword(email, password, salt) {
+    const user =
+      (await UserModel.findOne({ login: email })) ||
+      (await UserModel.findOne({ email }));
+
+    if (user.salt === salt) {
+      const hashPassword = await bcrypt.hash(password, 3);
+      const salt = uuidv4();
+      user.password = hashPassword;
+      user.salt = salt;
+      await user.save();
+      return {
+        status: "ok",
+      };
+    } else {
+      throw ApiError.BadRequest(`Ошибка доступа`);
+    }
+  }
+  async createProject(projectName, isHelper, refresh, imagesData, id) {
+    const proj = await projectModel.findOne({name: projectName})
+    if (proj){
+      throw ApiError.BadRequest('Такой проект уже существует')
+    }
+    console.log(refresh)
+    // Вам нужно получить userId, если он не доступен здесь
+    const user = tokenService.validateRefreshToken(refresh)
+
+    console.log(user)
+    const newProjectData = {
+      user: user.id,
+      id: id,
+      name: projectName,
+      isHelper: isHelper,
+      imageData: imagesData.map((imageData) => ({
+        id: uuidv4(),
+        name: imageData.name,
+        url: imageData.url, // сохраняем url
+        rects: imageData.rects,
+      })),
+    };
+
+    const project = await projectModel.create(newProjectData);
+    console.log(project);
+  }
+  async getProjects(refreshToken) {
+    const user = tokenService.validateRefreshToken(refreshToken)
+    const projects = await projectModel.find({ user: user.id });
+    return projects;
+  }
+
+  async saveProject(project, refreshToken) {
+    try {
+        const user = tokenService.validateRefreshToken(refreshToken)
+
+        let proj = await projectModel.findOne({ id: project.id, user: user.id });
+        if (proj) {
+            const currentUrls = proj.imageData.map((image) => image.url);
+            Object.assign(proj, project);
+            proj.imageData.forEach((image, index) => {
+                image.url = currentUrls[index];
+            });
+
+            let updatedProj = await projectModel.findOneAndUpdate(
+                { id: proj.id, user: user.id },  
+                proj, 
+                { new: true }  
+            );
+
+            console.log(updatedProj);
+        }
+    } catch (error) {
+        console.log(error);
+    }
+}
+
+
+  async deleteProject(refreshToken, id) {
+    try {
+      const user = tokenService.validateRefreshToken(refreshToken)
+      let proj = await projectModel.findOneAndDelete({ id: id, user: user.id });
+      return proj
+    } catch (error) {
+      console.log(error);
+    }
+  }
+}
+
+export default new UserService();
+import express from 'express'
+import cors from 'cors';
+import cookieParser from "cookie-parser";
+import dotenv from 'dotenv'
+import mongoose from "mongoose";
+import router from './router/router.js'
+import errorMid from './middleware/errorMid.js';
+
+dotenv.config()
+
+
+
+const PORT = 5001;
+const app = express();
+app.use(express.json());
+app.use(cookieParser());
+app.use("/he",cors(), express.static('/Users/egorgarmanov/Desktop/he'));
+
+app.use(cors({
+    credentials: true,
+    
+    origin: ['http://localhost:3000', 'http://localhost:3000/', 'http://localhost:5001']
+  }));
+  
+app.use('/api', router);
+app.use(errorMid)
+
+
+const start = async () => {
+    try {
+        await mongoose.connect(process.env.DB_URL, {
+            useNewUrlParser: true,
+            useUnifiedTopology: true
+        });
+        console.log("[DB] Connected to MongoDB");
+        app.listen(PORT, () => console.log(`Server started on port ${PORT}`))
+    } catch (e) {
+        console.log(e)
+    }
+}
+
+ 
+start();
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <meta
+      name="description"
+      content="Web site created using create-react-app"
+    />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+
+    <title>React App</title>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+
+  </body>
+</html>
+
+
+import React from "react";
+
+const ImageCard = ({image, imageName}) => {
+
+    return(
+        <div>
+            {imageName}
+            <img src={image}/>
+        </div>
+    );
+}
+
+export default ImageCard;
+
+export default class UserDto{
+    email;
+    id;
+    login;
+    isActivated;
+    constructor(model){
+        this.email = model.email;
+        this.id = model._id;
+        this.isActivated = model.isActivated;
+        this.login = model.login;
+    }
+}
+import axios from 'axios';
+
+
+
+const $api =  axios.create({
+    withCredentials: true,
+    baseURL: 'http://localhost:5001/api'
+})
+
+$api.interceptors.request.use((config) =>{
+    config.headers.Authorization = `Bearer ${localStorage.getItem('token')}`
+    return config;
+})
+
+export default $api;
+import React, {useContext, useState} from 'react'
+import { observer } from "mobx-react-lite";
+import { Context } from '../..';
+
+const ForgotPage = () => {
+
+    const {store} = useContext(Context);
+    const [password, setPassword] = useState('');
+    const [email, setEmail] = useState('');
+    const [code, setCode] = useState('');
+    const [enter, setEnter] = useState('');
+
+    async function sendCode(email, code){
+        const Acode = Math.floor(Math.random() * 9000 * 1000)
+        setCode(Acode)
+        console.log(Acode)
+        return await store.sendCode(email, Acode)
+    }
+    function checkCode(){
+
+        if(enter == code){
+
+            console.log('Everything is good')
+        } else {
+            console.log('Bad code')
+        }
+    }
+    async function changePassword(email, password){
+        setPassword(password)
+        await store.changePassword(email, password)
+    }
+  return (
+    <div>
+        <input 
+            type="email" 
+            onChange={(e) => {setEmail(e.target.value)}}
+            value={email}
+            placeholder='email'
+        />
+        <input 
+            type="text" 
+            onChange={(e) => {setEnter(e.target.value)}}
+            value={enter}
+            placeholder='enter'
+        />
+        <input 
+            type="text" 
+            onChange={(e) => {setPassword(e.target.value)}}
+            value={password}
+            placeholder='password'
+        />
+        <button onClick={() => {     
+            sendCode(email, code)}}>
+            sendcode
+        </button>
+        <button onClick={() => {
+            checkCode()}}>
+            check
+        </button>
+        <button onClick={() => {changePassword(email, password)}}>
+        password
+        </button>
+    </div>
+  )
+}
+
+export default observer(ForgotPage);
+import React, { useState, useContext, useEffect } from 'react';
+import { observer } from 'mobx-react-lite';
+import { Context } from '../..';
+import styles from './login.module.css';
+import { useNavigate } from 'react-router-dom';
+
+const LoginPage = () => {
+  const { store } = useContext(Context);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if(store.isAuth){
+        navigate('/projects');
+      }
+}, [store.isAuth]); 
+
+  async function handleLogin(email, password) {
+     await store.login(email, password);
+
+
+  }
+
+  return (
+    <div className={styles.center}>
+      <h2 className={styles.loginLabel}>LOGIN</h2>
+      <label className={styles.label}>Email</label>
+      <input
+        type="text"
+        onChange={(e) => setEmail(e.target.value)}
+        value={email}
+        placeholder="Email/Username"
+        className={styles.input}
+      />
+      <label className={styles.label}>Password</label>
+      <input
+        type="password"
+        onChange={(e) => setPassword(e.target.value)}
+        value={password}
+        placeholder="Password"
+        className={styles.input}
+      />
+      {store.error && <div className={styles.error}>{store.error}</div>}
+      <button onClick={() => handleLogin(email, password)} className={styles.button}>
+        Login
+      </button>
+    </div>
+  );
+};
+
+export default observer(LoginPage);
+.center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+  }
+  
+  .loginLabel {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 24px;
+  }
+  
+  .label {
+    font-size: 14px;
+    font-weight: bold;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  
+  .input {
+    width: 100%;
+    background: none;
+    border: none;
+    border-bottom: 1px solid #000;
+    padding: 8px 0;
+    outline: none;
+    margin-bottom: 24px;
+  }
+  
+  .button {
+    padding: 8px 16px;
+    background-color: #000;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    text-transform: uppercase;
+  }
+  import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+
+const ConnectionInfo = () => {
+  const [connectionInfo, setConnectionInfo] = useState(null);
+  const [deviceInfo, setDeviceInfo] = useState(null);
+
+  useEffect(() => {
+    const fetchConnectionInfo = async () => {
+      try {
+        const response = await axios.get('http://ip-api.com/json/');
+        setConnectionInfo(response.data);
+        console.log(response.data)
+      } catch (error) {
+        console.error('Error fetching connection information:', error);
+      }
+    };
+  
+    const fetchDeviceInfo = () => {
+      setDeviceInfo({
+        userAgent: window.navigator.userAgent,
+        platform: window.navigator.platform,
+        vendor: window.navigator.vendor,
+      });
+    };
+  
+    fetchConnectionInfo();
+    fetchDeviceInfo();
+  }, []);
+  return (
+    <div>
+      <h1>Connection and Device Information</h1>
+      {connectionInfo && (
+        <div>
+          <h2>Connection Information</h2>
+          <p>IP: {connectionInfo.query}</p>
+          <p>ISP: {connectionInfo.isp}</p>
+          <p>City: {connectionInfo.city}</p>
+          <p>Region: {connectionInfo.regionName}</p>
+          <p>Country: {connectionInfo.country}</p>
+        </div>
+      )}
+      {deviceInfo && (
+        <div>
+          <h2>Device Information</h2>
+          <p>User Agent: {deviceInfo.userAgent}</p>
+          <p>Platform: {deviceInfo.platform}</p>
+          <p>Vendor: {deviceInfo.vendor}</p>
+        </div>
+      )}
+    </div>
+  );
+    
+};
+
+export default ConnectionInfo;
+import React, { useState, useContext, useEffect } from "react";
+import { observer } from "mobx-react-lite";
+import { Context } from "../..";
+import styles from "./register.module.css";
+import { useNavigate } from "react-router-dom";
+
+const RegisterPage = () => {
+  const { store } = useContext(Context);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [login, setLogin] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [validation, setValidation] = useState({
+    length: false,
+    specialChar: false,
+    digits: false,
+    uppercase: false,
+    confirmPassword: false,
+  });
+
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (store.isRegistered) {
+      setTimeout(() => {
+        navigate("/login");
+      }, 3000);
+    }
+  }, [store.isRegistered, navigate]);
+
+  const validatePassword = (password) => {
+    console.log(validation)
+    setValidation({
+      length: password.length >= 8,
+      specialChar: /[-!$%^&*()_+|~=`{}\[\]:";'<>?,.\/]/.test(password),
+      digits: (password.match(/\d/g) || []).length >= 2,
+      uppercase: /[A-Z]/.test(password),
+      confirmPassword: password === passwordConfirm,
+    });
+  };
+
+  const handlePasswordChange = (e) => {
+    setPassword(e.target.value);
+    validatePassword(e.target.value);
+  };
+
+  const handlePasswordConfirmChange = (e) => {
+    setPasswordConfirm(e.target.value);
+    setValidation((prevValidation) => ({
+      ...prevValidation,
+      confirmPassword: password === e.target.value,
+    }));
+  };
+
+  async function handleRegister(email, password, login) {
+    try {
+      await store.registration(email, password, login);
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
+  return (
+    <div className={styles.container}>
+            <div className={styles.center}>
+      <h2 className={styles.registerLabel}>REGISTER</h2>
+      <label className={styles.label}>Email</label>
+      <input
+        type="email"
+        onChange={(e) => setEmail(e.target.value)}
+        value={email}
+        placeholder="Email"
+        className={styles.input}
+      />
+      <label className={styles.label}>Login</label>
+      <input
+        type="text"
+        onChange={(e) => setLogin(e.target.value)}
+        value={login}
+        placeholder="Login"
+        className={styles.input}
+      />
+      <label className={styles.label}>Password</label>
+      <input
+        type="password"
+        onChange={handlePasswordChange}
+        value={password}
+        placeholder="Password"
+        className={`${styles.input} ${
+          Object.values(validation).every((v) => v)
+            ? styles.valid
+            : styles.invalid
+        }`}
+      />
+      <div className={styles.requirements}>
+        <p className={validation.length ? styles.valid : styles.invalid}>
+          Length &gt; 8
+        </p>
+        <p className={validation.specialChar ? styles.valid : styles.invalid}>
+          Special character
+        </p>
+        <p className={validation.digits ? styles.valid : styles.invalid}>
+          At least 2 digits
+        </p>
+        <p className={validation.uppercase ? styles.valid : styles.invalid}>
+          One uppercase letter
+        </p>
+      </div>
+      <label className={styles.label}>Confirm Password</label>
+      <input
+        type="password"
+        onChange={handlePasswordConfirmChange}
+        value={passwordConfirm}
+        placeholder="Confirm Password"
+        className={`${styles.input} ${
+          validation.confirmPassword ? styles.valid : styles.invalid
+        }`}
+      />
+      {store.isRegistered && (
+        <div className={styles.success}>Registration successful</div>
+      )}
+      <button
+        onClick={() => handleRegister(email, password, login)}
+        className={styles.button}
+        disabled={!Object.values(validation).every((v) => v)}
+      >
+        Register
+      </button>
+    </div>
+    </div>
+  );
+};
+
+export default observer(RegisterPage);
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+}
+.center{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    width: 30%;
+}
+
+.loginLabel {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+}
+
+.label {
+  margin-top: 1rem;
+  font-weight: bold;
+}
+
+.input {
+  width: 100%;
+  padding: 0.5rem;
+  margin: 0.5rem 0;
+  border: none;
+  border-bottom: 2px solid #ccc;
+  outline: none;
+}
+
+.valid {
+  color: green;
+}
+
+.invalid {
+  color: red;
+}
+
+.button {
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  font-weight: bold;
+  background-color: #4a90e2;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+.button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.passwordRules {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-top: 0.5rem;
+}
+
+.validRule {
+  color: green;
+}
+
+.invalidRule {
+  color: red;
+}
+
+.success {
+  position: fixed;
+  bottom: 1rem;
+  left: 1rem;
+  background-color: #4caf50;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 3px;
+  font-weight: bold;
+}
+import React from "react";
+import { Rect} from "react-konva";
+import ResizeAnchor from "../ResizeAnchor/ResizeAnchor";
+
+
+const BoundingBox = ({
+    rect,
+    onDragMove,
+    onResize,
+    onSelect,
+    selected,
+    onDragEnd,
+    onResizeEnd,
+    scale
+    }) => {
+    const handleSelect = () => {
+        onSelect(rect.id);
+    };
+
+    const anchorPositions = [
+        { x: "x", y: "y" },
+        { x: "x", y: "y", offsetX: "width" },
+        { x: "x", y: "y", offsetY: "height" },
+        { x: "x", y: "y", offsetX: "width", offsetY: "height" },
+    ];
+
+    return (
+        <>
+        <Rect
+            x={rect.x * scale}
+            y={rect.y * scale}
+            width={rect.width * scale}
+            height={rect.height * scale}
+            fill={rect.color}
+            opacity={selected ? 0.6 : 0.4}
+            draggable
+            onDragMove={onDragMove}
+            onDragEnd={onDragEnd}
+            onClick={handleSelect}
+        />
+        {selected && (
+            <>
+            {anchorPositions.map((point, index) => (
+                <ResizeAnchor
+                key={index}
+                x={(rect[point.x] + (point.offsetX ? rect[point.offsetX] : 0)) * scale}
+                y={(rect[point.y] + (point.offsetY ? rect[point.offsetY] : 0)) * scale}
+                onDragMove={(e) => onResize(e, index)}
+                onDragEnd={onResizeEnd}
+                />
+            ))}
+            </>
+        )}
+        </>
+    );
+};
+
+  export default BoundingBox
+  import React, { useState, useEffect, useRef } from "react";
+
+
+const CroppedImage = ({ image, rect, onFilenameChange }) => {
+
+    const canvasRef = useRef(null);
+    const [inputValue, setInputValue] = useState("");
+  
+    useEffect(() => {
+      if (!canvasRef.current || !image) return;
+  
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext("2d");
+  
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(
+        image,
+        rect.x ,
+        rect.y ,
+        rect.width ,
+        rect.height ,
+        0,
+        0,
+        rect.width,
+        rect.height
+      );
+    }, [image, rect]);
+  
+    const handleFilenameChange = (e) => {
+      onFilenameChange(rect, e.target.value);
+    };
+  
+    const handleInputChange = (e) => {
+      setInputValue(e.target.value);
+    };
+  
+    const dataURLtoBlob = (dataURL) => {
+      const binary = atob(dataURL.split(",")[1]);
+      const array = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        array[i] = binary.charCodeAt(i);
+      }
+      return new Blob([array], { type: "image/jpeg" });
+    };
+  
+    const sendRequest = async () => {
+      const canvas = canvasRef.current;
+      const imageDataUrl = canvas.toDataURL("image/jpeg");
+      const imageBlob = dataURLtoBlob(imageDataUrl);
+  
+      const formData = new FormData();
+      formData.append("image", imageBlob);
+  
+      try {
+        const response = await fetch("http://127.0.0.1:8000/word", {
+          method: "POST",
+          body: formData,
+        });
+        const result = await response.json();
+        setInputValue(result.result);
+      } catch (error) {
+        console.error("Ошибка отправки запроса:", error);
+      }
+    };
+  
+    return (
+      <div >
+        <p>
+          x, y, w, h: ({Math.floor(rect.x)}, {Math.floor(rect.y)}), ({Math.floor(rect.width)}, {Math.floor(rect.height)})
+        </p>
+        <label>
+          Имя файла:
+          <input
+            type="text"
+            value={rect.name}
+            onChange={handleFilenameChange}
+            style={{    backgroundColor: 'inherit',
+              color: 'white',
+              border: 'none',
+              width: '100%'}}
+          />
+        </label>
+        <canvas
+          ref={canvasRef}
+          width={rect.width}
+          height={rect.height}
+          style={{ border: "1px solid black", maxWidth:'300px', maxHeight:'200px' }}
+        />
+
+        <button onClick={sendRequest}>Отправить</button>
+      </div>
+    );
+  };
+
+  export default CroppedImage;
+  import React from "react";
+import { Circle } from "react-konva";
+
+const ResizeAnchor = ({ x, y, onDragMove, onDragEnd }) => {
+  return (
+    <Circle
+      x={x}
+      y={y}
+      radius={6}
+      fill="white"
+      stroke="black"
+      strokeWidth={1}
+      draggable
+      onDragMove={onDragMove}
+      onDragEnd={onDragEnd}
+    />
+  );
+};
+
+export default ResizeAnchor;
+
+import React, { useState, useEffect, useRef } from "react";
+import { Stage, Layer, Image } from "react-konva";
+import useImage from "use-image";
+import { v4 as uuidv4 } from "uuid";
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
+import axios from "axios";
+import BoundingBox from "./BoundingBox/BoundingBox";
+import CroppedImage from "./CroppedImage/CroppedImage";
+import styles from "./ImageAnnotation.module.css";
+import { observer } from "mobx-react-lite";
+import Konva from "konva";
+
+const MIN_RECT_SIZE = 10;
+
+const randomColor = () => {
+  return "#" + Math.floor(Math.random() * 16777215).toString(16);
+};
+
+const ImageAnnotation = ({
+  imageURL,
+  rects: initialRects,
+  onRectsChange,
+}) => {
+  const [image] = useImage(imageURL);
+  const [rects, setRects] = useState(initialRects);
+  const [drawing, setDrawing] = useState(false);
+  const [currentRect, setCurrentRect] = useState(null);
+  const [selectedRectId, setSelectedRectId] = useState(null);
+  const rectsRef = useRef(rects);
+  const [scale, setScale] = useState(1);
+  const [stagePosition, setStagePosition] = useState({ x: 0, y: 0 });
+
+
+
+  const divRef = useRef(null)
+  const [dimensions, setDimensions] = useState({
+    width: 0,
+    height: 0
+  })
+
+  useEffect(() => {
+    if (divRef.current?.offsetHeight && divRef.current?.offsetWidth) {
+      setDimensions({
+        width: divRef.current.offsetWidth,
+        height: divRef.current.offsetHeight
+      })
+    }
+  }, [window.innerWidth])
+
+  useEffect(() => {
+    const handleRightClick = (e) => {
+      e.preventDefault();
+    };
+
+    window.addEventListener("contextmenu", handleRightClick);
+
+    return () => {
+      window.removeEventListener("contextmenu", handleRightClick);
+    };
+  }, []);
+
+
+
+  
+  const handleStageDragStart = (e) => {
+    const stage = e.target.getStage();
+    setStagePosition({ x: stage.x(), y: stage.y() });
+  };
+
+  const handleStageDragMove = (e) => {
+    const stage = e.target.getStage();
+    setStagePosition({ x: stage.x(), y: stage.y() });
+  };
+
+  useEffect(() => {
+    setRects(initialRects);
+  }, [initialRects, imageURL]);
+
+  useEffect(() => {
+    setScale(1);
+  }, [imageURL]);
+
+  useEffect(() => {
+    if (JSON.stringify(rectsRef.current) !== JSON.stringify(rects)) {
+      rectsRef.current = rects;
+      onRectsChange(rects);
+    }
+  }, [rects, onRectsChange]);
+
+  useEffect(() => {
+    const updateCroppedImages = () => {
+      if (selectedRectId) {
+        setRects(rects);
+      }
+    };
+    updateCroppedImages();
+  }, [rects, selectedRectId]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.key === "Backspace" || e.key === "Delete") && selectedRectId) {
+        setRects(rects.filter((rect) => rect.id !== selectedRectId));
+        setSelectedRectId(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [rects, selectedRectId]);
+
+  const dataURLtoBlob = (dataURL) => {
+    const binary = atob(dataURL.split(",")[1]);
+    const array = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      array[i] = binary.charCodeAt(i);
+    }
+    return new Blob([array], { type: "image/jpeg" });
+  };
+
+  const handleScaleChange = (e) => {
+    setScale(parseFloat(e.target.value));
+  };
+
+  const sendRequest = async (rect) => {
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+    ctx.drawImage(
+      image,
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      0,
+      0,
+      rect.width,
+      rect.height
+    );
+
+    const imageDataUrl = canvas.toDataURL("image/jpeg");
+    const imageBlob = dataURLtoBlob(imageDataUrl);
+
+    const formData = new FormData();
+    formData.append("image", imageBlob);
+
+    try {
+      const response = await axios.post("http://127.0.0.1:8000/word", formData);
+      return response.data.result;
+    } catch (error) {
+      console.error("Ошибка отправки запроса:", error);
+    }
+  };
+
+  const handleMouseDown = (e) => {
+    if (e.evt.button === 2) {
+      e.evt.preventDefault();
+      e.target.getStage().startDrag();
+    } else {
+      setDrawing(true);
+      const pos = e.target.getStage().getPointerPosition();
+      setCurrentRect({
+        x: (pos.x - stagePosition.x) / scale,
+        y: (pos.y - stagePosition.y) / scale,
+        width: 0,
+        height: 0,
+        id: uuidv4(),
+        color: randomColor(),
+        name: "",
+      });
+    }
+  };
+
+  const handleWheel = (e) => {
+    e.evt.preventDefault();
+    const scaleBy = 1.03;
+    const oldScale = scale;
+    const stage = e.target.getStage();
+    var pointer = stage.getPointerPosition();
+
+    const pointerPosition = {
+        x: (pointer.x  - stagePosition.x) / oldScale,
+        y: (pointer.y - stagePosition.y) / oldScale
+    };
+    
+
+
+    if (!e.evt.ctrlKey ) {
+        // Перемещение по вертикали или горизонтали в зависимости от нажатия Shift
+        if (e.evt.shiftKey) {
+            // Перемещение по горизонтали
+            const newX = stagePosition.x - e.evt.deltaY;
+            setStagePosition({ x: newX, y: stagePosition.y });
+        } else {
+            // Перемещение по вертикали
+            const newY = stagePosition.y - e.evt.deltaY;
+            setStagePosition({ x: stagePosition.x, y: newY });
+        }
+        return;
+    }
+    let direction = e.evt.deltaY > 0 ? -1 : 1;
+    const newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy;
+    setScale(newScale);
+
+    const newPos = {
+      x:
+      pointer.x - pointerPosition.x * newScale,
+      y:
+      pointer.y - pointerPosition.y * newScale,
+    };
+
+    setStagePosition(newPos);
+};
+
+
+
+  const handleMouseUp = async (e) => {
+    if (e.evt.button === 2) {
+      e.target.getStage().stopDrag();
+    }
+    if (drawing && currentRect) {
+      let finalRect = currentRect;
+
+      if (currentRect.width < 0) {
+        finalRect = {
+          ...finalRect,
+          x: currentRect.x + currentRect.width,
+          width: -currentRect.width,
+        };
+      }
+
+      if (currentRect.height < 0) {
+        finalRect = {
+          ...finalRect,
+          y: currentRect.y + currentRect.height,
+          height: -currentRect.height,
+        };
+      }
+
+      if (
+        finalRect.width >= MIN_RECT_SIZE &&
+        finalRect.height >= MIN_RECT_SIZE
+      ) {
+        const result = await sendRequest(finalRect);
+        setRects([...rects, { ...finalRect, name: result }]);
+        console.log(finalRect);
+      }
+      setCurrentRect(null);
+    }
+    setDrawing(false);
+  };
+
+  const handleDragEnd = async (e, index) => {
+    const newRects = rects.slice();
+    newRects[index] = {
+      ...newRects[index],
+      x: e.target.x() / scale,
+      y: e.target.y() / scale,
+    };
+
+    sendRequest(newRects[index]);
+    const result = await sendRequest(newRects[index]);
+    const updatedRects = rects.map((r) => {
+      if (r.id === newRects[index].id) {
+        return {
+          ...r,
+          name: result,
+        };
+      }
+      return r;
+    });
+    setRects(updatedRects);
+  };
+
+  const handleMouseMove = (e) => {
+    if (!drawing) return;
+    const pos = e.target.getStage().getPointerPosition();
+    setCurrentRect({
+      ...currentRect,
+      width: (pos.x - stagePosition.x - currentRect.x * scale) / scale,
+      height: (pos.y - stagePosition.y - currentRect.y * scale) / scale,
+    });
+  };
+
+  const handleDragMove = (e, index) => {
+    const newRects = rects.slice();
+    newRects[index] = {
+      ...newRects[index],
+      x: e.target.x() / scale,
+      y: e.target.y() / scale,
+    };
+    setRects(newRects);
+  };
+  const handleResizeEnd = async (index) => {
+    const rect = rects[index];
+    let newX = rect.x;
+    let newY = rect.y;
+    let newWidth = rect.width;
+    let newHeight = rect.height;
+
+    if (newWidth < 0) {
+      newX += newWidth;
+      newWidth = -newWidth;
+    }
+
+    if (newHeight < 0) {
+      newY += newHeight;
+      newHeight = -newHeight;
+    }
+
+    const updatedRect = {
+      ...rect,
+      x: newX,
+      y: newY,
+      width: newWidth,
+      height: newHeight,
+    };
+
+    const result = await sendRequest(updatedRect);
+    const updatedRects = rects.map((r) => {
+      if (r.id === rect.id) {
+        return {
+          ...updatedRect,
+          name: result,
+        };
+      }
+      return r;
+    });
+
+    setRects(updatedRects);
+  };
+
+  const handleResize = (e, index, anchorIndex) => {
+    const newRects = rects.slice();
+    const pos = e.target.getStage().getPointerPosition();
+    let newWidth, newX, newY, newHeight;
+
+    if (anchorIndex === 0 || anchorIndex === 2) {
+      newX = (pos.x - stagePosition.x) / scale;
+      newWidth =
+        rects[index].width -
+        ((pos.x - stagePosition.x) / scale - rects[index].x);
+    } else {
+      newX = rects[index].x;
+      newWidth = (pos.x - stagePosition.x) / scale - rects[index].x;
+    }
+
+    if (anchorIndex === 0 || anchorIndex === 1) {
+      newY = (pos.y - stagePosition.y) / scale;
+      newHeight =
+        rects[index].height -
+        ((pos.y - stagePosition.y) / scale - rects[index].y);
+    } else {
+      newY = rects[index].y;
+      newHeight = (pos.y - stagePosition.y) / scale - rects[index].y;
+    }
+
+    newRects[index] = {
+      ...newRects[index],
+      x: newX,
+      y: newY,
+      width: newWidth,
+      height: newHeight,
+    };
+
+    setRects(newRects);
+  };
+
+  const handleFilenameChange = (rect, name) => {
+    const updatedRects = rects.map((r) => {
+      if (r.id === rect.id) {
+        return {
+          ...r,
+          name: name,
+        };
+      }
+      return r;
+    });
+    setRects(updatedRects);
+  };
+
+
+
+  return (
+    <div className={styles.container}>
+  <div className={styles.innerContainer}>
+    <div className={styles.stageWrapper} ref={divRef}>
+      <Stage
+        x={Math.floor(stagePosition.x)}
+        y={Math.floor(stagePosition.y)}
+        width={dimensions.width} height={dimensions.height}
+        onDragStart={handleStageDragStart}
+        onDragMove={handleStageDragMove}
+        onMouseDown={handleMouseDown}
+        onMouseUp={handleMouseUp}
+        onMouseMove={handleMouseMove}
+        onWheel={handleWheel}
+      >
+        <Layer>
+          <Image
+            image={image}
+            width={image ? image.width : 0}
+            height={image ? image.height : 0}
+            scaleX={scale}
+            scaleY={scale}
+          />
+          {rects.map((rect, index) => (
+            <BoundingBox
+              key={rect.id}
+              rect={rect}
+              onDragMove={(e) => handleDragMove(e, index)}
+              onDragEnd={(e) => handleDragEnd(e, index)}
+              onResize={(e, anchorIndex) =>
+                handleResize(e, index, anchorIndex)
+              }
+              onResizeEnd={(e) => handleResizeEnd(index)}
+              onSelect={setSelectedRectId}
+              selected={selectedRectId === rect.id}
+              scale={scale}
+            />
+          ))}
+          {currentRect && drawing && (
+            <BoundingBox rect={currentRect} scale={scale} />
+          )}
+        </Layer>
+      </Stage>
+    </div>
+    <div className={styles.scaleInputWrapper}>
+      <input
+        type="range"
+        min="0.1"
+        max="2"
+        step="0.005"
+        value={scale}
+        onChange={handleScaleChange}
+        style={{ width: "200px" }}
+      />
+    </div>
+  </div>
+  <div className={styles.sidebar}>
+    {rects.map((rect) => (
+      <div key={rect.id}>
+        <CroppedImage
+          key={rect.id}
+          image={image}
+          rect={rect}
+          onFilenameChange={handleFilenameChange}
+        />
+      </div>
+    ))}
+  </div>
+</div>
+  );
+};
+
+export default observer(ImageAnnotation);
+.container {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+  
+  .innerContainer {
+    display: flex;
+    justify-content: space-between;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+  }
+  
+  .stageWrapper {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    margin: 0 0 10px 0;
+    contain: inline-size;
+    overflow: hidden;
+  }
+  
+  .stageWrapper:hover {
+    cursor: pointer;
+  }
+  
+  .scaleInputWrapper {
+    min-width: 100%;
+    display: flex;
+    z-index: 1;
+    justify-content: center;
+  }
+  
+  .sidebar {
+    width: 20%;
+    overflow-y: auto;
+    padding: 10px;
+    border-left: 1px solid white;
+    border-right: 1px solid white;
+    color: white;
+  }
+  
+  .Image{
+    height: 100px;
+    object-fit: scale-down;
+  }
+  
+  button{
+    display: none;
+  }
+  import React, { useState, useContext, useEffect } from "react";
+import ImageAnnotation from "./ImageAnnotation/ImageAnnotation";
+import { Context } from "../..";
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
+import styles from "./Canvas.module.css";
+import { observer } from "mobx-react-lite";
+import { useParams } from "react-router-dom";
+
+const Thumbnail = ({ image, onClick, selected }) => {
+  const thumbnailStyle = selected ? { filter: "drop-shadow(0px 4px 41px #10781A)" } : {};
+
+  return (
+    <div className={styles.thumb} style={thumbnailStyle}>
+      <p style={{ color: 'white' }}>{image.name}</p>
+      <img src={image.url} alt="thumbnail" width="150" onClick={onClick} />
+    </div>
+  );
+};
+
+const Canvas = () => {
+  const [imagesData, setImagesData] = useState([]);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(null);
+  const [allCanvasRect, setAllCanvasRect] = useState([]);
+  const { store } = useContext(Context);
+  const { id } = useParams();
+
+  useEffect(() => {
+    store.getProject();
+    store.selectProject(id);
+  }, []);
+
+  useEffect(() => {
+    if (store.isLoading == false) {
+      store.selectProject(id);
+      if (store.Project.id !== "") {
+        setImagesData(store.Project.imageData);
+        console.log(store.Project);
+      }
+    }
+  }, [store.Project, store.isLoading]);
+
+  const handleImageClick = (index) => {
+    setSelectedImageIndex(index);
+    saveToProject();
+  };
+
+  const saveToProject = () => {
+    store.Project.imageData = imagesData;
+    store.saveProject();
+    console.log("Сохранено в проект.");
+  };
+
+  const handleRectsChange = (newRects) => {
+    setImagesData(
+      imagesData.map((imageData, index) =>
+        index === selectedImageIndex
+          ? { ...imageData, rects: newRects }
+          : imageData
+      )
+    );
+    setAllCanvasRect(
+      allCanvasRect.map((imageData) => ({ ...imageData, newRects }))
+    );
+  };
+
+  const saveCroppedImages = async () => {
+    const zip = new JSZip();
+    const folder = zip.folder("cropped_images");
+
+    const processImage = (imageData) => {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.src = imageData.url;
+
+        img.onload = () => {
+          const promises = [];
+
+          for (const rect of imageData.rects) {
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            ctx.drawImage(
+              img,
+              rect.x,
+              rect.y,
+              rect.width,
+              rect.height,
+              0,
+              0,
+              rect.width,
+              rect.height
+            );
+
+            const blobPromise = new Promise((resolveBlob) => {
+              canvas.toBlob((blob) => {
+                const filename = rect.name || `image_${rect.id}`;
+                folder.file(`${filename}.jpeg`, blob);
+                resolveBlob();
+              }, "image/jpeg");
+            });
+
+            promises.push(blobPromise);
+          }
+
+          Promise.all(promises).then(() => resolve());
+        };
+      });
+    };
+
+    const allPromises = imagesData.map((imageData) => processImage(imageData));
+    await Promise.all(allPromises);
+
+    const zipBlob = await zip.generateAsync({ type: "blob" });
+    saveAs(zipBlob, "cropped_images.zip");
+  };
+
+  return (
+    <div className={styles.project}>
+      <div className={styles.workspace}>
+        <div className={styles.thumbnail}>
+          {imagesData.map((imageData, index) => (
+            <div key={index}>
+              <Thumbnail
+                key={index}
+                image={imageData}
+                onClick={() => handleImageClick(index)}
+                selected={index === selectedImageIndex}
+              />
+            </div>
+          ))}
+        </div>
+        <div className={styles.imageannotation}>
+          {selectedImageIndex !== null && (
+            <ImageAnnotation
+              imageURL={imagesData[selectedImageIndex].url}
+              rects={imagesData[selectedImageIndex].rects}
+              onRectsChange={handleRectsChange}
+              saveAllCroppedImages={saveCroppedImages}
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default observer(Canvas);
+.project{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100vh;
+    width: 100vw;
+    background-color: #373737; 
+  }
+  
+  .workspace{
+    display: flex;
+    gap: 5px;
+    width: 100%;
+    height: 90%;
+    margin: 3% 0;
+  }
+  
+  .thumbnail{
+    width: 10%;
+    border-right: 1px solid white;
+    border-left: 1px solid white;
+    padding: 15px;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    overflow:auto;
+  }
+  
+  .imageannotation{
+    width: 90%;
+  }
+  
+  .thumbnailImage {
+    height: 100px;
+    width: 150px;
+    object-fit: scale-down;
+    display: block;
+    margin: 15px auto;
+    filter: drop-shadow(0px 4px 41px #10781A);
+  }
+  
+  .thumbnailTitle {
+    text-align: center;
+    color: white;
+  }
+  import React, { useState, useEffect, useContext } from "react";
+import { observer } from "mobx-react-lite";
+import { useNavigate, useParams } from "react-router-dom";
+import styles from "./EditProject.module.css";
+
+import { Context } from "../..";
+
+const EditProject = () => {
+  const { store } = useContext(Context);
+  const { id } = useParams();
+  const navigate = useNavigate();
+
+  const [project, setProject] = useState({
+    projectName: "",
+    imagesData: [],
+  });
+  const [value, setValue] = useState("");
+
+  useEffect(() => {
+    const projectToEdit = store.allProjects.find((proj) => proj.id === id);
+    console.log(projectToEdit);
+    if (projectToEdit) {
+      setProject({
+        projectName: projectToEdit.name,
+        imagesData: projectToEdit.imageData,
+      });
+      console.log(project);
+    } else {
+      // Например, перенаправить пользователя обратно к списку проектов
+      navigate("/projects");
+    }
+  }, [id, store]);
+
+  useEffect(() => {
+    console.log(project);
+  }, [project]);
+
+  const handleImageDelete = (imageIndex) => {
+    const newImagesData = project.imagesData.filter(
+      (_, index) => index !== imageIndex
+    );
+    setProject({ ...project, imagesData: newImagesData });
+  };
+
+  const handleFiles = (files) => {
+    if (files) {
+      const newImagesData = Array.from(files).map((file) => ({
+        file,
+        url: URL.createObjectURL(file),
+        rects: [],
+        name: file.name,
+      }));
+
+      setProject({
+        ...project,
+        imagesData: [...project.imagesData, ...newImagesData],
+      });
+    }
+  };
+
+  const handleFileChange = (e) => {
+    handleFiles(e.target.files);
+  };
+
+  const handleSubmit = async () => {
+    const formData = new FormData();
+    formData.append("projectName", project.projectName);
+    project.imagesData.forEach((imageData, index) => {
+      formData.append(`images`, imageData.file, imageData.name);
+    });
+
+    await store.updateProject(id, formData);
+    navigate("/projects");
+  };
+
+  return (
+    <div className={styles.container}>
+      <div className={styles.textEditing}>Редактирование проекта</div>
+      <div className={styles.changeName}>
+        <div className={styles.changeNameText}>Название проекта:</div>
+        <div className={styles.input}>
+          <input
+            type="text"
+            value={project.projectName}
+            onChange={(e) => setProject({ projectName: e.target.value })}
+          />
+        </div>
+      </div>
+      <div className={styles.imagesName}>Изображения</div>
+      <div className={styles.images}>
+        <div>
+          <div className={styles.uploadImages}>
+            <label htmlFor="file-input" className="file-upload-button">
+              Добавить изображения
+            </label>
+            <input
+              type="file"
+              id="file-input"
+              name=""
+              onChange={handleFileChange}
+              multiple
+              style={{ display: "none" }}
+            />
+          </div>
+        </div>
+        {project.imagesData &&
+          project.imagesData.map((imageData, index) => (
+            <div key={index}>
+              <img src={imageData.url} alt="project-thumbnail" />
+              <div className={styles.underImage}>
+                <div>fileName: {imageData.name}</div>
+                <button onClick={() => handleImageDelete(index)}>
+                  Удалить изображение
+                </button>
+              </div>
+            </div>
+          ))}
+      </div>
+
+      <div className={styles.submitButton}>
+        <button onClick={handleSubmit}>Сохранить изменения</button>
+      </div>
+    </div>
+  );
+};
+
+export default observer(EditProject);
+.textEditing {
+    font-size: 24px;
+    margin-bottom: 50px;
+  }
+  
+  .changeName {
+    display: flex;
+    margin: 0 0 50px 0;
+  }
+  
+  .changeNameText {
+    margin: 0 30px 0 0;
+  }
+  
+  .input input{
+    border: none;
+    border-bottom: 1px solid black;
+  }
+  
+  .imagesName {
+    /* необходимые стили, если они нужны */
+    margin-bottom: 50px;
+  }
+  
+  .images {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 40px;
+    margin-bottom: 100px;
+  }
+  
+  .images > div {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 350px;
+    height: 250px;
+  }
+  
+
+  .container {
+    width: 90%;
+    margin: 0 5%;
+  }
+  
+  .images img {
+    height: 250px;
+    width: 350px;
+    object-fit: contain;
+    margin: 0 50px;
+  }
+  
+  
+  .uploadImages {
+    display: flex;
+    justify-content: center;
+    background-color: #f2f2f2;
+    border-radius: 15px;
+    height: 100%;
+    width: 350px;
+    align-items: center;
+  }
+  
+  .submitButton {
+    /* необходимые стили, если они нужны */
+  }
+
+  .underImage{
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+  }
+  import React, { useState, useContext } from 'react';
+import { Context } from '../..';
+import styles from './NewProject.module.css';
+import { v4 as uuidv4 } from 'uuid';
+
+const NewProject = () => {
+  const { store } = useContext(Context);
+  const [projectName, setProjectName] = useState('');
+  const [imagesData, setImagesData] = useState([]);
+  const [isHelper, setIsHelper] = useState(false);
+  const [dragging, setDragging] = useState(false);
+
+  const handleProjectNameChange = (e) => {
+    setProjectName(e.target.value);
+  };
+
+  const handleFileChange = (e) => {
+    handleFiles(e.target.files);
+  };
+  const dataURLtoBlob = (dataURL) => {
+    const binary = atob(dataURL.split(",")[1]);
+    const array = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      array[i] = binary.charCodeAt(i);
+    }
+    return new Blob([array], { type: "image/jpeg" });
+  };
+  const handleFiles = (files) => {
+    if (files) {
+      const newImagesData = Array.from(files).map((file) => ({
+        file, // Добавьте эту строку
+        url: URL.createObjectURL(file),
+        rects: [],
+        name: file.name,
+      }));
+  
+      setImagesData((prevImagesData) => [...prevImagesData, ...newImagesData]);
+    }
+  };
+  
+
+  const handleIsHelperChange = () => {
+    setIsHelper(!isHelper);
+  };
+
+  const handleSubmit = async () => {
+    const projectNew = {
+      projectName,
+      imagesData,
+      isHelper,
+      id: uuidv4(),
+    };
+  
+    const formData = new FormData();
+    formData.append('projectName', projectNew.projectName);
+    formData.append('isHelper', projectNew.isHelper);
+    formData.append('id', projectNew.id);
+    projectNew.imagesData.forEach((imageData, index) => {
+      formData.append(`images`, imageData.file, imageData.name);
+      formData.append(`rects[${index}]`, JSON.stringify(imageData.rects));
+    });
+    store.createProject(formData)
+
+
+  };
+  
+  
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+  };
+
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    setDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setDragging(false);
+    handleFiles(e.dataTransfer.files);
+  };
+
+  return (
+    <div>
+      <div>
+        <p>Название проекта</p>
+        <input type="text" value={projectName} onChange={handleProjectNameChange} />
+      </div>
+      <div
+        className={`${styles.dropzone} ${dragging ? styles.dragging : ''}`}
+        onDragOver={handleDragOver}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        <p>{imagesData.length ? `${imagesData.length} файл(ов)` : 'Перетащите файлы сюда'}</p>
+      </div>
+      <div>
+        <label htmlFor="file-input" className="file-upload-button">
+          Выберите файлы
+        </label>
+        <input
+          type="file"
+          id="file-input"
+          name=""
+          onChange={handleFileChange}
+          multiple
+          style={{ display: 'none' }}
+        />
+      </div>
+      <div>
+        <p>Использовать помощник</p>
+        <input type="checkbox" checked={isHelper} onChange={handleIsHelperChange} />
+      </div>
+      <button onClick={handleSubmit}>Создать проект</button>
+    </div>
+  );
+};
+
+export default NewProject;
+.dropzone {
+    border: 2px dashed #ccc;
+    border-radius: 4px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    margin-bottom: 20px;
+  }
+  
+  .dropzone.dragging {
+    border-color: #999;
+    background-color: #eee;
+  }
+  import React, { useState, useEffect, useContext } from "react";
+
+import { Context } from "../..";
+import { observer } from "mobx-react-lite";
+import { Link } from "react-router-dom";
+import styles from "./projects.module.css";
+
+const Projects = () => {
+  const { store } = useContext(Context);
+
+  useEffect(() => {
+    store.getProject();
+    console.log(store.allProjects);
+  }, []);
+
+  const handleDelete = async (id) => {
+    await store.deleteProject(id);
+    await store.getProject(); // обновляем список проектов после удаления
+  };
+
+
+  return (
+    <div className={styles.projectsContainer}>
+      <div className={`${styles.projectCard} ${styles.newProjectCard}`}>
+        <div>Создать проект</div>
+        <Link to={`/project/new`}>
+          <button>Создать проект</button>
+        </Link>
+      </div>
+      {store.allProjects.slice().map((project) => (
+        <div key={project.id} className={styles.projectCard}>
+          <div>
+            <h2>{project.name}</h2>
+          </div>
+          <div>
+            <p>Images: {project.imageData.length}</p>
+            <p>
+              Annotated:{" "}
+              {
+                project.imageData.filter((image) => image.rects.length > 0)
+                  .length
+              }
+            </p>
+          </div>
+          <div>
+          <Link to={`/project/edit/${project.id}`}>
+            <button>Редактировать проект</button>
+          </Link>
+            <button onClick={() => handleDelete(project.id)}>
+              Удалить проект
+            </button>
+          </div>
+          <Link to={`/project/${project.id}`}>
+            <button>Открыть проект</button>
+          </Link>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+export default observer(Projects);
+.projectsContainer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    padding: 100px 30px;
+  }
+  
+  .projectCard {
+    width: 250px;
+    height: 150px;
+    background-color: #f2f2f2;
+    margin: 0 30px 100px 0;
+    border-radius: 15px;
+    padding: 15px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  
+  .newProjectCard {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  p{
+    margin: 5px 0;
+  }
+  h2{
+    margin: 5px 0;
+  }
+  import $api from "../http";
+
+
+export default class AuthService {
+    static async login(email, password){
+        return $api.post('/login', {email, password})
+    }
+    static async registration(email, password, login){
+        return $api.post('/registration', {email, password, login})
+    }
+    static async logout(){
+        return $api.post('/logout')
+    }
+    static async refresh(){
+        return $api.get('/refresh')
+    }
+    static async sendCode(email, code){
+        return $api.post('/sendcode', {email, code})
+    }
+    static async changePassword(email, password, salt){
+        return $api.post('/changePassword', {email, password, salt})
+    }
+    static async createProject(formData){
+        console.log(formData)
+        return $api.post('/createProject', formData, {headers: {'Content-Type': 'multipart/form-data' }})
+    }
+    static async getProject(){
+        return $api.get(`/getProjects`)
+    }
+    static async saveProject(project){
+        return $api.post(`/saveProject`, {project})
+    }
+    static async deleteProject(id){
+        return $api.delete(`/deleteProject/${id}`)
+    }
+}
+import { makeAutoObservable, runInAction } from "mobx";
+import UserDto from "../DTO/userDto";
+import AuthService from "../serives/AuthService";
+
+export default class Store {
+  isAuth = false;
+  isRegistered = false;
+  isLoading = false;
+  error = '';
+  salt = "";
+  user = {
+    email: "",
+    isActivated: false,
+    id: "",
+    login: "",
+  };
+
+  Project = {
+    user: "",
+    id: "",
+    name: "",
+    isHelper: false,
+    imageData: [
+      {
+        id: "",
+        name: "",
+        url: "",
+        rects: [
+          {
+            x: 0,
+            y: 0,
+            width: 0,
+            height: 0,
+            id: "",
+            color: "",
+            name: "",
+          },
+        ],
+      },
+    ],
+  };
+  allProjects = new Array();
+  constructor() {
+    makeAutoObservable(this);
+  }
+  updateImageDataRects(imageId, newRects) {
+    const imageIndex = this.Project.imageData.findIndex(
+      (image) => image.id === imageId
+    );
+    console.log(newRects);
+
+    if (imageIndex !== -1) {
+      this.Project.imageData[imageIndex].rects = newRects;
+    }
+  }
+  setAuth(bool) {
+    this.isAuth = bool;
+  }
+  setRegister(bool) {
+    this.isRegistered = bool;
+  }
+  get getError() {
+    return this.error;
+  }
+  setLoading(bool){
+    this.isLoading = bool;
+  }
+  setUser(user) {
+    this.user = user;
+  }
+  setProject(project) {
+    this.Project = project;
+  }
+  setAllProject(project) {
+    this.allProjects = project;
+  }
+  pushProject(project) {
+    this.allProjects.push(project);
+  }
+  setError(error){
+    this.error = error;
+}
+  setSalt(salt) {
+    this.salt = salt;
+  }
+
+  async loadImageAsBase64(url) {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Error loading image from ${url}`);
+      }
+      const blob = await response.blob();
+
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error(error);
+      return null;
+    }
+  }
+
+
+  async login(email, password) {
+    try {
+      const response = await AuthService.login(email, password);
+      localStorage.setItem('token', response.data.accesToken);
+      console.log(response)
+      this.setAuth(true);
+      this.setUser(response.data.user);
+    } catch (e) {
+      console.log(e.response?.data?.message);
+      this.setError(e.response?.data?.message);
+    }
+  }
+
+
+  async registration(email, password, login) {
+    this.setError('')
+    try {
+      const response = await AuthService.registration(email, password, login);
+      localStorage.setItem("token", response.data.accessToken);
+      this.setRegister(true);
+      this.setUser(response.data.user);
+    } catch (e) {
+      this.setError(e.response?.data?.message);
+      console.error(e.response?.data?.message);
+    }
+  }
+  async logout() {
+    try {
+      await AuthService.logout();
+      localStorage.removeItem("token");
+      this.setAuth(false);
+      this.setUser({});
+    } catch (e) {
+      console.error(e.response?.data?.message);
+    }
+  }
+  async forgot(id, token, password) {
+    try {
+      await AuthService.forgot(id, token, password);
+    } catch (e) {
+      console.error(e.response?.data?.message);
+    }
+  }
+  async deleteProject(id) {
+    try {
+      await AuthService.deleteProject(id);
+    } catch (e) {
+      console.error(e.response?.data?.message);
+    }
+  }
+  async sendCode(email, code) {
+    try {
+      const response = await AuthService.sendCode(email, code);
+      this.setSalt(response.data.salt);
+      console.log(response.data.salt);
+    } catch (e) {
+      console.log(e.response?.data?.message);
+    }
+  }
+  async changePassword(email, password) {
+    try {
+      console.log("her ", this.salt);
+      await AuthService.changePassword(email, password, this.salt);
+    } catch (e) {
+      console.log(e.response?.data?.message);
+    }
+  }
+  async createProject(formData) {
+    try {
+      const response = await AuthService.createProject(formData);
+      console.log(response);
+    } catch (e) {
+      console.log(e.response?.data?.message);
+    }
+  }
+  async getProject() {
+    try {
+      this.setAllProject([])
+      this.setLoading(true)
+      const response = await AuthService.getProject();
+      const projects = await Promise.all(
+        response.data.map(async (project) => {
+          const imageData = await Promise.all(
+            project.imageData.map(async (image) => {
+              const base64Url = await this.loadImageAsBase64(
+                `http://localhost:5001/he${image.url.replace(
+                  "Users/egorgarmanov/Desktop/he/",
+                  ""
+                )}`
+              );
+              return { ...image, url: base64Url };
+            })
+          );
+          return { ...project, imageData };
+        })
+      );
+      projects.forEach((project) => this.pushProject(project));
+      this.setProject(this.allProjects[0]);
+    } catch (e) {
+      console.log(e.response?.data?.message);
+    } finally {
+      this.setLoading(false);
+    }
+  }
+
+  async saveProject() {
+    try {
+      this.setLoading(true)
+      const projectWithoutURLs = {
+        ...this.Project,
+        imageData: this.Project.imageData.map((image) => {
+          const { url, ...rest } = image;
+          return rest;
+        }),
+      };
+      const response = await AuthService.saveProject(projectWithoutURLs);
+    } catch (e) {
+      console.log(e.response?.data?.message);
+    } finally{
+      this.setLoading(false);
+    }
+  }
+
+  async selectProject(id) {
+    try {
+      const index = this.allProjects.findIndex((project) => project.id === id);
+      this.setProject(this.allProjects[index]);
+    } catch (e) {
+      console.log(e.response?.data?.message);
+    }
+  }
+}
+.App {
+  text-align: center;
+}
+
+.App-logo {
+  height: 40vmin;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
+}
+
+.App-header {
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.App-link {
+  color: #61dafb;
+}
+
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+import React, { useRef, useState } from "react";
+import {Routes, Route} from 'react-router-dom';
+import LoginPage from "./pages/login/login";
+import RegisterPage from "./pages/registration/register";
+import { observer } from "mobx-react-lite";
+import Forgot from "./pages/forgot/forgot";
+import Canvas from "./project/canvas/Canvas";
+import NewProject from "./project/NewProject/NewProject";
+import Projects from "./project/Projects/Projects";
+import ConnectionChecker from "./pages/profile/profile";
+import EditProject from "./project/editProject/EditProject";
+
+const App = () => {
+  return(
+    <Routes>
+      <Route path="/login" element={<LoginPage/>}/>
+      <Route path="/registration" element={<RegisterPage/>}/>
+      <Route path="/reset-password" element={<Forgot/> }/>
+      <Route path="/projects" element={<Projects/> }/>
+      <Route path="/project/:id" element={<Canvas/> }/>
+      <Route path="/project/edit/:id" element={<EditProject/> }/>
+      <Route path="/project/new" element={<NewProject/> }/>
+    </Routes>
+  );
+}
+
+export default observer(App);
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scrollbar-width: thin; 
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+import React, {createContext} from 'react';
+import ReactDOM from 'react-dom/client';
+import './index.css';
+import App from './App';
+import Aug from './project/canvas/ImageAnnotation/ImageAnnotation';
+import Store from './store/store';
+import {BrowserRouter} from 'react-router-dom'
+import LoginPage from './pages/login/login';
+import RegisterPage from './pages/registration/register';
+
+const store = new Store();
+
+export const Context = createContext({
+  store,
+})
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  <Context.Provider value = {{
+    store
+  }}>
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+
+  </Context.Provider>
+);
+
+
+
+
+
+
+

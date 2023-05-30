@@ -1,83 +1,80 @@
-.container {
+.center {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   height: 100vh;
-}
-.center{
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    width: 30%;
+  width: 100vw;
+  background-color: #1e1e1e;
+  color: #fff;
+  font-size: 18px;
+  text-align: center;
 }
 
-.loginLabel {
-  font-size: 2rem;
-  margin-bottom: 1rem;
+.centered {
+  width: 40%;
+}
+
+.registerLabel {
+  margin: 0 0 100px 0;
 }
 
 .label {
-  margin-top: 1rem;
-  font-weight: bold;
+  font-size: 16px;
+  margin: 15px 0 8px 0;
+  color: #6d6d6d;
 }
 
 .input {
   width: 100%;
-  padding: 0.5rem;
-  margin: 0.5rem 0;
+  background: none;
   border: none;
-  border-bottom: 2px solid #ccc;
+  border-bottom: 1px dashed white;
+  padding: 8px 0;
   outline: none;
-}
-
-.valid {
-  color: green;
-}
-
-.invalid {
-  color: red;
+  margin: 0 0 0;
+  width: 50%;
+  caret-color: #fff;
+  color: #fff;
+  font-size: 16px;
+  font-family: 'Source Code Pro';
 }
 
 .button {
-  margin-top: 1rem;
-  padding: 0.5rem 1rem;
-  font-weight: bold;
-  background-color: #4a90e2;
-  color: white;
+  padding: 4px 8px;
+  background-color: #000;
+  color: #fff;
   border: none;
   cursor: pointer;
+  background: #6f6b4e;
+  border-radius: 5px;
+  font-size: 16px;
+  font-family: "Source Code Pro";
+}
+::placeholder {
+  color: #fff;
+  opacity: 1;
 }
 
-.button:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
-}
-
-.passwordRules {
+.buttons {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  margin-top: 0.5rem;
+  justify-content: center;
+  width: 90%;
+  margin: 0 5%;
+  align-items: center;
 }
 
-.validRule {
-  color: green;
+.child {
+  width: 50%;
 }
 
-.invalidRule {
-  color: red;
+.error {
+  font-size: 16px;
+  color: #a70000;
+  margin: 20px 0 0 0;
 }
-
-.success {
-  position: fixed;
-  bottom: 1rem;
-  left: 1rem;
-  background-color: #4caf50;
-  color: white;
-  padding: 0.5rem 1rem;
-  border-radius: 3px;
-  font-weight: bold;
+.errorPass{
+  font-size: 14px;
+  color: #a70000;
+  margin: 5px 0 0 0;
 }

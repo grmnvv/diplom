@@ -25,27 +25,45 @@ const LoginPage = () => {
 
   return (
     <div className={styles.center}>
-      <h2 className={styles.loginLabel}>LOGIN</h2>
-      <label className={styles.label}>Email</label>
-      <input
-        type="text"
-        onChange={(e) => setEmail(e.target.value)}
-        value={email}
-        placeholder="Email/Username"
-        className={styles.input}
-      />
-      <label className={styles.label}>Password</label>
-      <input
-        type="password"
-        onChange={(e) => setPassword(e.target.value)}
-        value={password}
-        placeholder="Password"
-        className={styles.input}
-      />
-      {store.error && <div className={styles.error}>{store.error}</div>}
-      <button onClick={() => handleLogin(email, password)} className={styles.button}>
-        Login
-      </button>
+      <div className={styles.centered}>
+        <p className={styles.loginLabel}> <span style={{color:'#C586C0'}}>import</span> fastannot <span style={{color:'#C586C0'}}>as</span> fa</p>
+        <p className={styles.label}>#объявите почту</p>
+        <label>email = </label>
+        <input
+          type="text"
+          onChange={(e) => setEmail(e.target.value)}
+          value={email}
+          className={styles.input}
+        />
+        <p className={styles.label}>#объявите пароль</p>
+        <label>password = </label>
+        <input
+          type="password"
+          onChange={(e) => setPassword(e.target.value)}
+          value={password}
+          className={styles.input}
+        />
+        {store.error && <div className={styles.error}>{store.error}</div>}
+        <p className={styles.label} style={{margin: '100px 0 5px 0'}}>#нажмите на функцию, чтобы войти</p>
+        <button onClick={() => handleLogin(email, password)} className={styles.button}>
+          fa.login(email, password)
+        </button>
+        <div className={styles.buttons}>
+          <div className={styles.child}>
+            <p className={styles.label} style={{margin: '50px 0 5px 0', fontSize:'14px'}}>#не зарегистрированы</p>
+            <button onClick={() => navigate('/registration')} className={styles.button} style={{fontSize:'14px'}} >
+              fa.register()
+            </button>
+          </div>
+          <div className={styles.child}>
+          <p className={styles.label} style={{margin: '50px 0 5px 0', fontSize:'14px'}}>#забыли пароль</p>
+            <button onClick={() => navigate('/reset-password')} className={styles.button} style={{fontSize:'14px'}}>
+              fa.forgot()
+            </button>
+          </div>
+        </div>
+      </div>
+      
     </div>
   );
 };
