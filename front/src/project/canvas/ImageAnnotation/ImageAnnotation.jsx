@@ -16,7 +16,15 @@ const randomColor = () => {
   return "#" + Math.floor(Math.random() * 16777215).toString(16);
 };
 
-const ImageAnnotation = ({ imageURL, rects: initialRects, onRectsChange, saveCRNN, saveYOLO,thumbnailsCollapsed,saveToProject }) => {
+const ImageAnnotation = ({
+  imageURL,
+  rects: initialRects,
+  onRectsChange,
+  saveCRNN,
+  saveYOLO,
+  thumbnailsCollapsed,
+  saveToProject,
+}) => {
   const [image] = useImage(imageURL);
   const [rects, setRects] = useState(initialRects);
   const [drawing, setDrawing] = useState(false);
@@ -53,22 +61,25 @@ const ImageAnnotation = ({ imageURL, rects: initialRects, onRectsChange, saveCRN
     };
   }, []);
 
+  // Обработчик начала перетаскивания сцены
   const handleStageDragStart = (e) => {
-    const stage = e.target.getStage();
-    setStagePosition({ x: stage.x(), y: stage.y() });
+    const stage = e.target.getStage(); // Получаем сцену
+    setStagePosition({ x: stage.x(), y: stage.y() }); // Устанавливаем позицию сцены
   };
 
+  // Обработчик процесса перетаскивания сцены
   const handleStageDragMove = (e) => {
-    const stage = e.target.getStage();
-    setStagePosition({ x: stage.x(), y: stage.y() });
+    const stage = e.target.getStage(); // Получаем сцену
+    setStagePosition({ x: stage.x(), y: stage.y() }); // Устанавливаем позицию сцены
   };
 
+  // useEffect срабатывает при монтировании и обновлении компонента, устанавливая прямоугольники в их исходное состояние
   useEffect(() => {
     setRects(initialRects);
   }, [initialRects, imageURL]);
 
-
-
+  // Этот useEffect вызывается при изменении rects или onRectsChange
+  // Проверяет, изменился ли rects, и если да, то вызывает onRectsChange
   useEffect(() => {
     if (JSON.stringify(rectsRef.current) !== JSON.stringify(rects)) {
       rectsRef.current = rects;
@@ -76,6 +87,8 @@ const ImageAnnotation = ({ imageURL, rects: initialRects, onRectsChange, saveCRN
     }
   }, [rects, onRectsChange]);
 
+  // Этот useEffect вызывается при изменении rects или selectedRectId
+  // Если selectedRectId не пуст, обновляет состояние rects
   useEffect(() => {
     const updateCroppedImages = () => {
       if (selectedRectId) {
@@ -85,6 +98,9 @@ const ImageAnnotation = ({ imageURL, rects: initialRects, onRectsChange, saveCRN
     updateCroppedImages();
   }, [rects, selectedRectId]);
 
+  // Этот useEffect добавляет обработчик события нажатия клавиши на window
+  // Если нажат "Backspace" и есть selectedRectId, удаляет соответствующий прямоугольник
+  // При демонтировании компонента удаляет обработчик
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === "Backspace" && selectedRectId) {
@@ -99,11 +115,11 @@ const ImageAnnotation = ({ imageURL, rects: initialRects, onRectsChange, saveCRN
     };
   }, [rects, selectedRectId]);
 
-  function handleDelete(selectedRectId){
+  function handleDelete(selectedRectId) {
     setRects(rects.filter((rect) => rect.id !== selectedRectId));
   }
-  function handleSelect(selectedRectId){
-    setSelectedRectId(selectedRectId)
+  function handleSelect(selectedRectId) {
+    setSelectedRectId(selectedRectId);
   }
   const dataURLtoBlob = (dataURL) => {
     const binary = atob(dataURL.split(",")[1]);
@@ -164,16 +180,26 @@ const ImageAnnotation = ({ imageURL, rects: initialRects, onRectsChange, saveCRN
         id: uuidv4(),
         color: randomColor(),
         name: "",
-        label: ""
+        label: "",
       });
     }
   };
 
+  // Обработчик события колесика мыши
   const handleWheel = (e) => {
+    // Предотвращаем дефолтное поведение браузера при прокрутке
     e.evt.preventDefault();
+
+    // Устанавливаем значение, на которое будем масштабировать
     const scaleBy = 1.036;
+
+    // Получаем старое значение масштаба
     const oldScale = scale;
+
+    // Получаем ссылку на сцену (этап/слои)
     const stage = e.target.getStage();
+
+    // Получаем позицию курсора на сцене
     var pointer = stage.getPointerPosition();
 
     const pointerPosition = {
@@ -181,22 +207,33 @@ const ImageAnnotation = ({ imageURL, rects: initialRects, onRectsChange, saveCRN
       y: (pointer.y - stagePosition.y) / oldScale,
     };
 
+    // Если клавиша Ctrl не нажата, выполняем панорамирование сцены
     if (!e.evt.ctrlKey) {
-        const newX = stagePosition.x - (e.evt.deltaX * 0.4);
-        const newY = stagePosition.y - (e.evt.deltaY * 0.4);
-        setStagePosition({ x: newX, y: newY });
-      
+      // Вычисляем новые координаты для позиции сцены
+      const newX = stagePosition.x - e.evt.deltaX * 0.4;
+      const newY = stagePosition.y - e.evt.deltaY * 0.4;
+
+      // Устанавливаем новую позицию сцены
+      setStagePosition({ x: newX, y: newY });
+
       return;
     }
+    // Определяем направление прокрутки колесика мыши: при прокрутке вверх deltaY > 0, присваиваем -1, иначе 1.
     let direction = e.evt.deltaY > 0 ? -1 : 1;
+
+    // Изменяем масштаб в зависимости от направления: если вверх, уменьшаем масштаб, если вниз, увеличиваем.
     const newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy;
+
+    // Устанавливаем новое значение масштаба
     setScale(newScale);
 
+    // Вычисляем новую позицию сцены, учитывая измененный масштаб и позицию указателя мыши
     const newPos = {
       x: pointer.x - pointerPosition.x * newScale,
       y: pointer.y - pointerPosition.y * newScale,
     };
 
+    // Устанавливаем новую позицию для сцены
     setStagePosition(newPos);
   };
 
@@ -235,7 +272,6 @@ const ImageAnnotation = ({ imageURL, rects: initialRects, onRectsChange, saveCRN
     }
     saveToProject();
     setDrawing(false);
-    
   };
 
   const handleDragEnd = async (e, index) => {
@@ -258,7 +294,7 @@ const ImageAnnotation = ({ imageURL, rects: initialRects, onRectsChange, saveCRN
       return r;
     });
     setRects(updatedRects);
-    saveToProject()
+    saveToProject();
   };
 
   const handleMouseMove = (e) => {
@@ -280,23 +316,27 @@ const ImageAnnotation = ({ imageURL, rects: initialRects, onRectsChange, saveCRN
     };
     setRects(newRects);
   };
+  // Функция, вызываемая при завершении изменения размеров прямоугольника
   const handleResizeEnd = async (index) => {
-    const rect = rects[index];
-    let newX = rect.x;
+    const rect = rects[index]; // Получаем изменяемый прямоугольник из массива
+    let newX = rect.x; // Начальная позиция X прямоугольника
     let newY = rect.y;
-    let newWidth = rect.width;
+    let newWidth = rect.width; // Начальная ширина прямоугольника
     let newHeight = rect.height;
 
+    // Если новая ширина отрицательна, обновляем позицию X и меняем знак ширины
     if (newWidth < 0) {
       newX += newWidth;
       newWidth = -newWidth;
     }
 
+    // Если новая высота отрицательна, обновляем позицию Y и меняем знак высоты
     if (newHeight < 0) {
       newY += newHeight;
       newHeight = -newHeight;
     }
 
+    // Создаем обновленный объект прямоугольника с новыми значениями
     const updatedRect = {
       ...rect,
       x: newX,
@@ -305,25 +345,31 @@ const ImageAnnotation = ({ imageURL, rects: initialRects, onRectsChange, saveCRN
       height: newHeight,
     };
 
+    // Отправляем запрос на обновление прямоугольника и получаем результат
     const result = await sendRequest(updatedRect);
+
+    // Обновляем массив прямоугольников, заменяя изменяемый прямоугольник на обновленный объект
     const updatedRects = rects.map((r) => {
       if (r.id === rect.id) {
         return {
           ...updatedRect,
-          name: result,
+          name: result, // Обновляем имя прямоугольника с результатом запроса
         };
       }
       return r;
     });
 
+    // Устанавливаем обновленный массив прямоугольников в состояние
     setRects(updatedRects);
   };
 
+  // Функция обработки изменения размеров прямоугольников
   const handleResize = (e, index, anchorIndex) => {
-    const newRects = rects.slice();
-    const pos = e.target.getStage().getPointerPosition();
-    let newWidth, newX, newY, newHeight;
+    const newRects = rects.slice(); // Создаем копию массива прямоугольников
+    const pos = e.target.getStage().getPointerPosition(); // Получаем позицию указателя мыши
+    let newWidth, newX, newY, newHeight; // Объявляем переменные для новой ширины, позиции X, позиции Y и новой высоты
 
+    // Изменяем позицию X и ширину прямоугольника в зависимости от якорной точки
     if (anchorIndex === 0 || anchorIndex === 2) {
       newX = (pos.x - stagePosition.x) / scale;
       newWidth =
@@ -334,6 +380,7 @@ const ImageAnnotation = ({ imageURL, rects: initialRects, onRectsChange, saveCRN
       newWidth = (pos.x - stagePosition.x) / scale - rects[index].x;
     }
 
+    // Изменяем позицию Y и высоту прямоугольника в зависимости от якорной точки
     if (anchorIndex === 0 || anchorIndex === 1) {
       newY = (pos.y - stagePosition.y) / scale;
       newHeight =
@@ -344,6 +391,7 @@ const ImageAnnotation = ({ imageURL, rects: initialRects, onRectsChange, saveCRN
       newHeight = (pos.y - stagePosition.y) / scale - rects[index].y;
     }
 
+    // Обновляем массив прямоугольников с новыми значениями для изменяемого прямоугольника
     newRects[index] = {
       ...newRects[index],
       x: newX,
@@ -352,6 +400,7 @@ const ImageAnnotation = ({ imageURL, rects: initialRects, onRectsChange, saveCRN
       height: newHeight,
     };
 
+    // Устанавливаем обновленный массив прямоугольников в состояние
     setRects(newRects);
   };
 

@@ -207,7 +207,7 @@ export default class Store {
           const imageData = await Promise.all(
             project.imageData.map(async (image) => {
               const base64Url = await this.loadImageAsBase64(
-                `http://localhost:5001/he${image.url.replace(
+                `http://194.67.67.177:5001/he${image.url.replace(
                   "Users/egorgarmanov/Desktop/he/",
                   ""
                 )}`

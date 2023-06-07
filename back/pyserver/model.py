@@ -56,6 +56,7 @@ def TextModel(path):
     return model
 
 
+# Эта функция преобразует текст в список цифр, используя глобальный список char_list
 def encode_to_labels(txt):
     dig_lst = []
     for index, char in enumerate(txt):
@@ -66,18 +67,20 @@ def encode_to_labels(txt):
     return dig_lst
 
 
+# Эта функция находит доминирующий цвет в изображении
 def find_dominant_color(image):
     width, height = 150, 150
-    image = image.resize((width, height), resample=0)
-    pixels = image.getcolors(width * height)
-    sorted_pixels = sorted(pixels, key=lambda t: t[0])
-    dominant_color = sorted_pixels[-1][1]
+    image = image.resize((width, height), resample=0) # Изменяем размер изображения
+    pixels = image.getcolors(width * height) # Получаем цвета изображения
+    sorted_pixels = sorted(pixels, key=lambda t: t[0]) # Сортируем по частоте появления цвета
+    dominant_color = sorted_pixels[-1][1] # Берем наиболее часто встречающийся цвет
     return dominant_color
 
 
+# Функция предобработки изображения
 def preprocess_img(img, imgSize):
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    if img is None:
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) # Преобразуем изображение в градации серого
+    if img is None: # Если изображения нет, создаем черное изображение нужного размера
         img = np.zeros([imgSize[1], imgSize[0]])
         print("Image None!")
     (wt, ht) = imgSize
@@ -87,32 +90,33 @@ def preprocess_img(img, imgSize):
     f = max(fx, fy)
 
     newSize = (max(min(wt, int(w / f)), 1),
-               max(min(ht, int(h / f)), 1))
-    img = cv2.resize(img, newSize, interpolation=cv2.INTER_CUBIC)
-    most_freq_pixel = find_dominant_color(Image.fromarray(img))
-    target = np.ones([ht, wt]) * most_freq_pixel
-    target[0:newSize[1], 0:newSize[0]] = img
+               max(min(ht, int(h / f)), 1)) # Вычисляем новый размер изображения
+    img = cv2.resize(img, newSize, interpolation=cv2.INTER_CUBIC) # Изменяем размер изображения
+    most_freq_pixel = find_dominant_color(Image.fromarray(img)) # Находим доминирующий цвет
+    target = np.ones([ht, wt]) * most_freq_pixel # Заполняем изображение доминирующим цветом
+    target[0:newSize[1], 0:newSize[0]] = img # Вставляем изображение в центр
     img = target
 
     return img
 
 
+# Функция для подготовки изображения к предсказанию
 def image_prep(image):
-    image = preprocess_img(image, (256, 64))
-    image = np.expand_dims(image, axis=-1)
-    image = image / 255.
+    image = preprocess_img(image, (256, 64)) # Предобрабатываем изображение
+    image = np.expand_dims(image, axis=-1) # Добавляем дополнительное измерение
+    image = image / 255. # Нормализуем пиксели изображения
     return image
 
 
+# Получаем предсказание из модели
 def get_pred(array, model):
     output = ''
     array = np.array(array)
-    prediction = model.predict(array)
+    prediction = model.predict(array) # Прогнозируем
     out = K.get_value(
         K.ctc_decode(prediction, input_length=np.ones(prediction.shape[0]) * prediction.shape[1], greedy=True)[0][0])
-    for x in out:
+    for x in out: # Преобразуем выходное значение в текст
         for p in x:
             if int(p) != -1:
                 output += char_list[int(p)]
     return output
-

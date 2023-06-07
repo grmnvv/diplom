@@ -4,7 +4,7 @@ import axios from 'axios';
 
 const $api =  axios.create({
     withCredentials: true,
-    baseURL: 'http://localhost:5001/api'
+    baseURL: 'http://194.67.67.177:5001/api'
 })
 
 $api.interceptors.request.use((config) =>{

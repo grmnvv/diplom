@@ -18,8 +18,7 @@ app.use("/he",cors(), express.static('/Users/egorgarmanov/Desktop/he'));
 
 app.use(cors({
     credentials: true,
-    
-    origin: ['http://localhost:3000', 'http://localhost:3000/', 'http://localhost:5001']
+    origin: ['http://localhost:3000', 'http://localhost:3000/', 'http://localhost:5001', 'http://194.67.67.177:3000', 'http://194.67.67.177:3000/', 'http://194.67.67.177:5001']
   }));
   
 app.use('/api', router);
